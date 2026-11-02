@@ -42,7 +42,7 @@
       playlists: JSON.parse(JSON.stringify(DATA.playlists)),
       ladders: DATA.ladders.map((l) => ({ ...l, history: [] })),
       loved: "",
-      filters: { feel: null, len: null, level: null },
+      filters: { feel: null, len: null, level: null, popular: null },
       pathTab: "all",
       currentPlaylist: DATA.playlists[0].id,
       current: DATA.playlists[0].items[0],
@@ -120,6 +120,7 @@
 
   function matchesFilters(v) {
     const f = state.filters;
+    if (f.popular && !v.popular) return false;
     if (f.feel && v.feel !== f.feel) return false;
     if (f.level && !(v.level === f.level || v.level === "all")) return false;
     if (f.len) {
@@ -131,7 +132,7 @@
     return true;
   }
 
-  function anyFilter() { const f = state.filters; return !!(f.feel || f.len || f.level); }
+  function anyFilter() { const f = state.filters; return !!(f.feel || f.len || f.level || f.popular); }
 
   /* ------------------------------------------------------------------ */
   /* Toast                                                              */
@@ -342,6 +343,7 @@
     if (!anyFilter()) { sum.textContent = ""; return; }
     const n = allVideos().filter((v) => v.section !== "sound" && matchesFilters(v)).length;
     const bits = [];
+    if (state.filters.popular) bits.push("Popular");
     if (state.filters.feel) bits.push(FEELS.find((f) => f.id === state.filters.feel).label);
     if (state.filters.len) bits.push(LENS[state.filters.len]);
     if (state.filters.level) bits.push(state.filters.level === "beginner" ? "Beginner-friendly" : "Intermediate");
@@ -429,6 +431,7 @@
 
   function tagsHtml(v) {
     const out = [];
+    if (v.popular) out.push('<span class="tag pop">★ Popular' + (v.views ? " · " + esc(v.views) + " views" : "") + "</span>");
     const lv = LEVELS.find((l) => l.id === v.level);
     if (lv) out.push('<span class="tag sage">' + esc(lv.label) + "</span>");
     const fe = FEELS.find((f) => f.id === v.feel);
@@ -511,7 +514,7 @@
       const colour = SWATCHES[teachers.indexOf(t) % SWATCHES.length];
       return '<article class="teacher' + (s === "no" ? " no" : "") + '">' +
         '<div class="teacher-top"><span class="avatar" style="background:' + colour + '" aria-hidden="true">' + esc(t.name.charAt(0)) + "</span>" +
-        '<div><div class="teacher-name">' + esc(t.name) + '</div><div class="teacher-where">' + esc(t.where || "") + "</div></div></div>" +
+        '<div><div class="teacher-name">' + esc(t.name) + '</div><div class="teacher-where">' + esc(t.where || "") + "</div>" + (t.popular ? '<span class="tag pop">★ Popular channel</span>' : "") + "</div></div>" +
         '<div class="teacher-meta">' + classes.length + (classes.length === 1 ? " class" : " classes") + " in my library</div>" +
         '<div class="status-row" role="group" aria-label="Status for ' + esc(t.name) + '">' +
         STATUSES.map((st) => '<button type="button" class="status-btn" data-teacher="' + esc(t.id) + '" data-s="' + st.id + '" aria-pressed="' + (s === st.id) + '">' + st.label + "</button>").join("") +
@@ -556,7 +559,7 @@
     $("#grid-sound").innerHTML = soundList().map((v, i) => {
       const on = state.sound === v.id;
       return '<div class="sound-tile' + (on ? " on" : "") + '" style="background:' + tints[i % tints.length] + '">' +
-        "<span>" + esc(v.title) + '<br><span class="sub-line">' + esc(v.channel) + " · " + fmtLen(v.min) + "</span></span>" +
+        "<span>" + esc(v.title) + '<br><span class="sub-line">' + esc(v.channel) + " · " + fmtLen(v.min) + (v.popular ? " · ★ " + esc(v.views) + " views" : "") + "</span></span>" +
         '<div class="row">' +
         (on
           ? '<button type="button" data-sound-off>Stop</button>'
@@ -836,7 +839,7 @@
     save();
   });
   $("#clearFilters").addEventListener("click", function () {
-    state.filters = { feel: null, len: null, level: null };
+    state.filters = { feel: null, len: null, level: null, popular: null };
     save();
     renderAllGrids();
   });

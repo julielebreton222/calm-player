@@ -9,6 +9,7 @@
  *   min      length in minutes (used for the 15 / 30 / 60+ filter)
  *   style    a short free-text style label shown on the card
  *   teacher  (yoga only) links a class to a teacher on "My yoga path"
+ *   popular  true for widely watched videos from big channels; `views` is the view count when added
  *
  * Anything you add in the app is saved in your browser and merged with this list.
  */
@@ -30,6 +31,11 @@ window.CALM_DATA = {
     { id: "breatheflow", name: "Breathe and Flow", where: "Mobility-minded Vinyasa", status: "totry" },
     { id: "ulu", name: "Ulu Yoga", where: "90-min Hatha Vinyasa · alignment", status: "totry" },
     { id: "akshaya", name: "Akshaya Agnes", where: "Traditional Hatha · all levels", status: "totry" },
+    { id: "adriene", name: "Yoga With Adriene", where: "Gentle, welcoming Hatha & Vinyasa · one of the biggest yoga channels", status: "totry", popular: true },
+    { id: "kassandra", name: "Yoga with Kassandra", where: "Morning flows & Yin", status: "totry", popular: true },
+    { id: "sarahbeth", name: "SarahBethYoga", where: "Short, clear Vinyasa flows", status: "totry", popular: true },
+    { id: "boho", name: "Boho Beautiful Yoga", where: "Flowing full-body practices filmed outdoors", status: "totry", popular: true },
+    { id: "travis", name: "Travis Eliot", where: "Power yoga · strong, long classes", status: "totry", popular: true },
   ],
 
   videos: [
@@ -51,6 +57,16 @@ window.CALM_DATA = {
     { id: "_hHuczegZDs", section: "yoga", title: "Classic Sun Salutation · Hatha", channel: "One Yoga", min: 43, level: "beginner", feel: "flow", style: "Hatha" },
     { id: "_noquwycq78", section: "yoga", title: "Ten Minute Yoga Nidra · Reset Your Nervous System", channel: "Ally Boothroyd · Sarovara Yoga", min: 11, level: "all", feel: "rest", style: "Yoga Nidra" },
 
+    // Popular picks
+    { id: "v7AYKMP6rOE", section: "yoga", teacher: "adriene", title: "Yoga For Complete Beginners · 20 Minute Home Yoga", channel: "Yoga With Adriene", min: 24, level: "beginner", feel: "gentle", style: "Hatha", popular: true, views: "56M" },
+    { id: "oBu-pQG6sTY", section: "yoga", teacher: "adriene", title: "Day 1 · Ease Into It · 30 Days of Yoga", channel: "Yoga With Adriene", min: 35, level: "beginner", feel: "flow", style: "Vinyasa", popular: true, views: "32M" },
+    { id: "GLy2rYHwUqY", section: "yoga", teacher: "adriene", title: "Total Body Yoga · Deep Stretch", channel: "Yoga With Adriene", min: 45, level: "all", feel: "gentle", style: "Deep stretch", popular: true, views: "30M" },
+    { id: "XCIviBT3Txc", section: "yoga", teacher: "sarahbeth", title: "15 Minute Morning Yoga · Full Body Flow", channel: "SarahBethYoga", min: 16, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "5.6M" },
+    { id: "lC5f2xqWBag", section: "yoga", teacher: "travis", title: "60 Min Power Yoga · Flexibility", channel: "Travis Eliot", min: 63, level: "intermediate", feel: "strong", style: "Power yoga", popular: true, views: "3.7M" },
+    { id: "6zzeSJxJS4s", section: "yoga", teacher: "boho", title: "30 Min Full Body Flow · Stretch, Breathe & Feel the Bliss", channel: "Boho Beautiful Yoga", min: 29, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "2.6M" },
+    { id: "Y8vJqiePu1I", section: "yoga", teacher: "kassandra", title: "15 min Gentle Morning Yoga · Full Body Stretch", channel: "Yoga with Kassandra", min: 17, level: "beginner", feel: "gentle", style: "Gentle yoga", popular: true, views: "2.1M" },
+    { id: "hHhxKkskHDg", section: "yoga", teacher: "kassandra", title: "30 min Morning Yoga · Feel Great", channel: "Yoga with Kassandra", min: 28, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "2M" },
+
     // ---------- Calisthenics ----------
     { id: "gOkCJ57IvNg", section: "move", title: "Home Workout for Beginners", channel: "Hybrid Calisthenics", min: 26, level: "beginner", feel: "strong", style: "Full body" },
     { id: "yMrJA1sYCvA", section: "move", title: "Day 1: Push-ups & Core · Beginner's Home Workout", channel: "Hybrid Calisthenics", min: 14, level: "beginner", feel: "strong", style: "Push & core" },
@@ -60,6 +76,14 @@ window.CALM_DATA = {
     { id: "N-D49aRmS2Q", section: "move", title: "30 Min Calisthenics-Inspired Bodyweight Workout", channel: "growingannanas", min: 34, level: "intermediate", feel: "strong", style: "Strength" },
     { id: "_VeW_HDXz94", section: "move", title: "30 Min Full Body Calisthenics · No Repeat", channel: "BeeZee", min: 31, level: "intermediate", feel: "strong", style: "Full body" },
 
+    // Popular picks
+    { id: "UItWltVZZmE", section: "move", title: "20 Min Full Body Workout · Beginner Version", channel: "Pamela Reif", min: 22, level: "beginner", feel: "strong", style: "Full body", popular: true, views: "66M" },
+    { id: "UBMk30rjy0o", section: "move", title: "20 Min Full Body Workout · No Equipment", channel: "Pamela Reif", min: 20, level: "intermediate", feel: "strong", style: "Full body", popular: true, views: "59M" },
+    { id: "CGmr02bfHUo", section: "move", title: "Full Body Workout · 20 min, 28 Day Challenge", channel: "Chloe Ting", min: 21, level: "intermediate", feel: "strong", style: "Full body", popular: true, views: "33M" },
+    { id: "kIVxdIWy7Eo", section: "move", title: "Start Calisthenics with This Workout", channel: "THENX", min: 14, level: "beginner", feel: "strong", style: "Calisthenics", popular: true, views: "5.6M" },
+    { id: "kuUZYUBHryw", section: "move", title: "20 Min Beginner Calisthenics Workout at Home", channel: "Tom Peto Training", min: 19, level: "beginner", feel: "strong", style: "Calisthenics", popular: true, views: "3.9M" },
+    { id: "gnTzk1yUHB4", section: "move", title: "Complete 15 Min Full Body Workout", channel: "THENX", min: 18, level: "all", feel: "strong", style: "Calisthenics", popular: true, views: "2.7M" },
+
     // ---------- Flexibility ----------
     { id: "L_xrDAtykMI", section: "flex", title: "15 Minute Beginner Stretch Routine", channel: "Tom Merrick", min: 15, level: "beginner", feel: "gentle", style: "Full body stretch" },
     { id: "OjcN6RzWFWs", section: "flex", title: "25 Minute Beginner Flexibility Routine V3", channel: "Tom Merrick", min: 26, level: "beginner", feel: "gentle", style: "Full body stretch" },
@@ -67,6 +91,14 @@ window.CALM_DATA = {
     { id: "CmCysOVh5gA", section: "flex", title: "30 Minute Full Body Flexibility Routine V4", channel: "Tom Merrick", min: 33, level: "all", feel: "flow", style: "Full body stretch" },
     { id: "enSIG1rTjJA", section: "flex", title: "45 Minute Full Body Flexibility Routine", channel: "Tom Merrick", min: 46, level: "intermediate", feel: "flow", style: "Full body stretch" },
     { id: "cOiO6_E6CDI", section: "flex", title: "Unlock Your Splits · Hip Flexor & Hamstring Class", channel: "FLEXFORM by Shan", min: 38, level: "intermediate", feel: "strong", style: "Splits" },
+
+    // Popular picks
+    { id: "g_tea8ZNk5A", section: "flex", title: "15 Min Full Body Stretch · Daily Routine", channel: "Mady Morrison", min: 17, level: "all", feel: "gentle", style: "Full body stretch", popular: true, views: "106M" },
+    { id: "CY6QP4ofwx4", section: "flex", title: "Full Body Stretch · Gentle 30 Min Routine", channel: "Mady Morrison", min: 28, level: "all", feel: "gentle", style: "Yoga-inspired stretch", popular: true, views: "20M" },
+    { id: "sTANio_2E0Q", section: "flex", title: "20 min Full Body Stretch for Stress & Anxiety Relief", channel: "MadFit", min: 21, level: "all", feel: "rest", style: "Full body stretch", popular: true, views: "19M" },
+    { id: "itJE4neqDJw", section: "flex", title: "12 Min Daily Stretch · Full Body", channel: "MadFit", min: 14, level: "all", feel: "gentle", style: "Full body stretch", popular: true, views: "13M" },
+    { id: "KjednnUNNjA", section: "flex", title: "20 min Full Body Stretch for Flexibility", channel: "Anna McNulty Stretches", min: 21, level: "intermediate", feel: "flow", style: "Flexibility", popular: true, views: "7.8M" },
+    { id: "ugXQe5hbUAA", section: "flex", title: "Beginner Flexibility Routine · Stretches for the Inflexible", channel: "MadFit", min: 34, level: "beginner", feel: "gentle", style: "Full body stretch", popular: true, views: "4.6M" },
 
     // ---------- Pilates (no equipment) ----------
     { id: "CdjRQ6GG8bA", section: "pilates", title: "Gentle Pilates · 15 Minutes for Beginners", channel: "Jessica Valant", min: 17, level: "beginner", feel: "gentle", style: "Mat Pilates" },
@@ -76,6 +108,14 @@ window.CALM_DATA = {
     { id: "C2HX2pNbUCM", section: "pilates", title: "30 Min Full Body At-Home Pilates", channel: "Move With Nicole", min: 33, level: "all", feel: "flow", style: "Mat Pilates" },
     { id: "koTzaUu7Vws", section: "pilates", title: "40 Min Full Body · Intermediate Pilates Class", channel: "Move With Nicole", min: 44, level: "intermediate", feel: "strong", style: "Mat Pilates" },
 
+    // Popular picks
+    { id: "f9UbVRqd9YY", section: "pilates", title: "15 Min Pilates · Slow Full Body Toning", channel: "Pamela Reif", min: 16, level: "beginner", feel: "gentle", style: "Low impact", popular: true, views: "11M" },
+    { id: "zTLGjyt1GdQ", section: "pilates", title: "Total Body Pilates Workout · POP Pilates", channel: "blogilates", min: 12, level: "all", feel: "strong", style: "POP Pilates", popular: true, views: "2.8M" },
+    { id: "enK76XbR9Q0", section: "pilates", title: "12 Min Pilates · Slow Full Body Toning, Floor Only", channel: "Pamela Reif", min: 13, level: "all", feel: "flow", style: "Low impact", popular: true, views: "2.8M" },
+    { id: "gsgRJd_-rLI", section: "pilates", title: "21 Minute All in One Tone Workout", channel: "blogilates", min: 24, level: "all", feel: "strong", style: "POP Pilates", popular: true, views: "1.8M" },
+    { id: "kg07a-mgmlI", section: "pilates", title: "15 Minute Everyday Pilates Abs & Core", channel: "Lottie Murphy", min: 14, level: "all", feel: "strong", style: "Core", popular: true, views: "1.7M" },
+    { id: "FQRoS0KsQBo", section: "pilates", title: "Ultimate Pilates Toning · 30 Min Abs, Glutes, Back", channel: "Lottie Murphy", min: 34, level: "intermediate", feel: "strong", style: "Mat Pilates", popular: true, views: "1.4M" },
+
     // ---------- Dance (no equipment) ----------
     { id: "TItIq0L0e58", section: "dance", title: "15 Min Throwbacks Dance Party Workout", channel: "MadFit", min: 15, level: "all", feel: "strong", style: "Dance cardio" },
     { id: "q7ytBN8eaiM", section: "dance", title: "African Dance Workout · Let's Shine 15", channel: "Kukuwa Fitness", min: 19, level: "all", feel: "flow", style: "African dance" },
@@ -83,6 +123,12 @@ window.CALM_DATA = {
     { id: "3LpJSXiI3iA", section: "dance", title: "20 Minute Low Impact Dance to Brighten Your Mood", channel: "Improved Health", min: 23, level: "beginner", feel: "gentle", style: "Low impact" },
     { id: "aBtP7008EfA", section: "dance", title: "30-Minute All-Levels Cardio Dance Workout", channel: "PS Fit", min: 31, level: "all", feel: "strong", style: "Dance cardio" },
     { id: "r9120Tk-JQI", section: "dance", title: "African Dance Workout · Fantastic Classics", channel: "Kukuwa Fitness", min: 33, level: "intermediate", feel: "strong", style: "African dance" },
+
+    // Popular picks
+    { id: "F-jgNJyRkiU", section: "dance", title: "January Challenge Sweat Session", channel: "The Fitness Marshall", min: 37, level: "all", feel: "strong", style: "Dance cardio", popular: true, views: "3M" },
+    { id: "TcKGkEyoYGg", section: "dance", title: "30 Min Dua Lipa Dance Workout", channel: "MadFit", min: 34, level: "all", feel: "strong", style: "Dance cardio", popular: true, views: "2.4M" },
+    { id: "vI5MzT-wIjs", section: "dance", title: "30 Min Cardio Aerobics · All Standing, Low Impact", channel: "MadFit", min: 29, level: "beginner", feel: "flow", style: "Low impact", popular: true, views: "1.5M" },
+    { id: "jR_yGxrNHq0", section: "dance", title: "30 Minute Sweat Session · Day 2", channel: "The Fitness Marshall", min: 32, level: "all", feel: "strong", style: "Dance cardio", popular: true, views: "1.3M" },
 
     // ---------- Soundscapes ----------
     { id: "aaPE-MlAppQ", section: "sound", title: "Rain on leaves", channel: "Calm Relax Ambient Soothing", min: 180, level: "all", feel: "rest", style: "Rain" },
@@ -92,6 +138,13 @@ window.CALM_DATA = {
     { id: "AO2S2QZjykE", section: "sound", title: "Ocean waves, morning", channel: "Relaxing Sounds Of Nature", min: 61, level: "all", feel: "rest", style: "Ocean" },
     { id: "xNN7iTA57jM", section: "sound", title: "Forest birdsong", channel: "The Guild of Ambience", min: 180, level: "all", feel: "rest", style: "Forest" },
     { id: "UgHKb_7884o", section: "sound", title: "Crackling fireplace", channel: "Cat Trumpet", min: 720, level: "all", feel: "rest", style: "Fire" },
+    // Popular picks
+    { id: "o8GrqUSdzi0", section: "sound", title: "Piano & rain", channel: "Soothing Relaxation", min: 603, level: "all", feel: "rest", style: "Rain & piano", popular: true, views: "177M" },
+    { id: "yIQd2Ya0Ziw", section: "sound", title: "Rainstorm", channel: "Calm", min: 480, level: "all", feel: "rest", style: "Rain", popular: true, views: "112M" },
+    { id: "bn9F19Hi1Lk", section: "sound", title: "Rolling ocean waves", channel: "Naturaleza Viva", min: 677, level: "all", feel: "rest", style: "Ocean", popular: true, views: "86M" },
+    { id: "eTeD8DAta4c", section: "sound", title: "Steady rain", channel: "Relaxing White Noise", min: 600, level: "all", feel: "rest", style: "Rain", popular: true, views: "74M" },
+    { id: "HmH4W8JOifg", section: "sound", title: "Rain & gentle thunder", channel: "Jason Stephenson", min: 180, level: "all", feel: "rest", style: "Rain", popular: true, views: "64M" },
+    { id: "yEP2YrD-dyY", section: "sound", title: "Big Tibetan singing bowl", channel: "Meditative Mind", min: 71, level: "all", feel: "rest", style: "Singing bowls", popular: true, views: "9.2M" },
   ],
 
   playlists: [

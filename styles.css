@@ -119,6 +119,8 @@ button { cursor: pointer; }
 .tag.pink { background: var(--pink); }
 .tag.sage { background: var(--sage); }
 .tag.lilac { background: var(--lilac); }
+.tag.pop { background: #F3DCC8; color: #6B3A12; }
+.chip.gold { background: #F3DCC8; }
 
 /* ---------- Mood ---------- */
 .mood { display: flex; flex-direction: column; gap: 14px; }
