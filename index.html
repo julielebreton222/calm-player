@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My Calm Player</title>
+  <meta name="description" content="Yoga, calisthenics, flexibility, Pilates, dance and soundscapes — only the things I love, without the YouTube noise.">
+  <meta name="theme-color" content="#F8EFEC">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%233A2232'/%3E%3Cpath d='M12 9v14l11-7z' fill='%23F8EFEC'/%3E%3C/svg%3E">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <span class="brand-name">My Calm Player</span>
+      <span class="muted">only the things I love</span>
+    </div>
+    <nav aria-label="Sections" class="nav" id="nav"></nav>
+    <button type="button" class="btn-outline" id="openAdd">+ Add video or teacher</button>
+  </header>
+
+  <section aria-label="How do you feel today" class="mood">
+    <h1 id="greeting">What does your body want?</h1>
+    <div class="filters" id="filters">
+      <div class="chip-row" role="group" aria-label="Feel">
+        <button type="button" class="chip pink" data-filter="feel" data-value="gentle">Gentle</button>
+        <button type="button" class="chip pink" data-filter="feel" data-value="flow">Flow</button>
+        <button type="button" class="chip pink" data-filter="feel" data-value="strong">Strong</button>
+        <button type="button" class="chip pink" data-filter="feel" data-value="rest">Rest &amp; breathe</button>
+      </div>
+      <span class="divider" aria-hidden="true"></span>
+      <div class="chip-row" role="group" aria-label="Length">
+        <button type="button" class="chip" data-filter="len" data-value="short">~15 min</button>
+        <button type="button" class="chip" data-filter="len" data-value="mid">~30 min</button>
+        <button type="button" class="chip" data-filter="len" data-value="long">60 min+</button>
+      </div>
+      <span class="divider" aria-hidden="true"></span>
+      <div class="chip-row" role="group" aria-label="Level">
+        <button type="button" class="chip sage" data-filter="level" data-value="beginner">Beginner</button>
+        <button type="button" class="chip sage" data-filter="level" data-value="intermediate">Intermediate</button>
+      </div>
+      <button type="button" class="link-btn" id="clearFilters" hidden>Clear</button>
+    </div>
+    <p class="muted small" id="filterSummary" aria-live="polite"></p>
+  </section>
+
+  <section aria-label="Player" class="player-area">
+    <div class="player-main">
+      <div class="frame" id="frame">
+        <div id="ytPlayer"></div>
+        <img class="poster" id="poster" alt="">
+        <button type="button" class="big-play" id="bigPlay" aria-label="Play">
+          <svg width="30" height="30" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z" fill="currentColor"/></svg>
+        </button>
+        <div class="frame-msg" id="frameMsg" hidden></div>
+      </div>
+      <div class="now">
+        <div class="now-text">
+          <span class="eyebrow" id="nowEyebrow">Now playing</span>
+          <span class="now-title" id="nowTitle">Pick something calm</span>
+          <span class="muted" id="nowChannel"></span>
+          <p class="note" id="nowNote" hidden></p>
+        </div>
+        <div class="now-actions">
+          <button type="button" class="btn-soft" id="keepBtn" aria-pressed="false">♡ Keep</button>
+          <div class="pop-wrap">
+            <button type="button" class="btn-soft" id="toPlaylistBtn" aria-haspopup="true" aria-expanded="false">Add to playlist</button>
+            <div class="pop" id="playlistPop" hidden></div>
+          </div>
+          <button type="button" class="btn-soft" id="soundUnderBtn" aria-expanded="false" aria-controls="soundPanel">Sound under it</button>
+        </div>
+      </div>
+
+      <div class="panel" id="soundPanel" hidden>
+        <span class="panel-title">Soundscape underneath</span>
+        <div class="chip-row" id="soundChips"></div>
+        <label class="vol">Volume <input type="range" id="soundVol" min="0" max="100" value="40"></label>
+        <div class="sound-mini" id="soundMiniWrap" hidden><div id="ytSound"></div></div>
+      </div>
+
+      <div class="panel" id="ratePanel" hidden>
+        <span class="panel-title" id="rateTitle">After class, how was it?</span>
+        <div class="rate-row">
+          <button type="button" class="rate sage" data-rate="kept">Keep teacher</button>
+          <button type="button" class="rate pink" data-rate="trying">Maybe</button>
+          <button type="button" class="rate plain" data-rate="no">Not for me</button>
+        </div>
+      </div>
+    </div>
+
+    <aside aria-label="Up next" class="upnext">
+      <div class="upnext-head">
+        <label class="sr-only" for="playlistSelect">Playlist</label>
+        <select id="playlistSelect" class="select-title"></select>
+        <span class="muted small" id="playlistCount"></span>
+      </div>
+      <ol class="queue" id="queue"></ol>
+      <div class="upnext-controls">
+        <button type="button" class="icon-btn" id="prevBtn" aria-label="Previous">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6l-8 6 8 6V6zM6 6v12"/></svg>
+        </button>
+        <button type="button" class="btn-dark grow" id="playAllBtn">Play whole playlist</button>
+        <button type="button" class="icon-btn" id="nextBtn" aria-label="Next">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l8 6-8 6V6zM18 6v12"/></svg>
+        </button>
+      </div>
+    </aside>
+  </section>
+
+  <section id="kept" aria-labelledby="keptH" class="block" hidden>
+    <div class="block-head"><h2 id="keptH">Kept</h2><span class="muted small">videos you marked ♡</span></div>
+    <div class="grid cards" id="grid-kept"></div>
+  </section>
+
+  <section id="yoga" aria-labelledby="yogaH" class="block">
+    <div class="block-head">
+      <h2 id="yogaH">My yoga path — teachers I'm trying</h2>
+      <span class="muted small" id="pathSummary"></span>
+    </div>
+    <div class="chip-row" role="group" aria-label="Teacher status" id="pathTabs">
+      <button type="button" class="pill active" data-status="all">All</button>
+      <button type="button" class="pill" data-status="totry">To try</button>
+      <button type="button" class="pill" data-status="trying">Trying</button>
+      <button type="button" class="pill" data-status="kept">Kept</button>
+    </div>
+    <div class="grid teachers" id="teacherGrid"></div>
+    <div class="loved">
+      <label for="lovedNote" class="loved-title">What I loved in India</label>
+      <textarea id="lovedNote" rows="3" placeholder="e.g. holding poses longer, chanting, pranayama first, the teacher counting breaths"></textarea>
+      <span class="small">A note to compare each new teacher against. Saved automatically.</span>
+    </div>
+    <h3 class="sub">Classes</h3>
+    <div class="grid cards" id="grid-yoga"></div>
+  </section>
+
+  <section id="move" aria-labelledby="moveH" class="block">
+    <div class="block-head">
+      <h2 id="moveH">Calisthenics path — where I am on each ladder</h2>
+      <span class="muted small">Log reps after each session · move up a step when the top of the rep range feels easy</span>
+    </div>
+    <div class="grid ladders" id="ladderGrid"></div>
+    <h3 class="sub">Full-length classes</h3>
+    <div class="grid cards" id="grid-move"></div>
+  </section>
+
+  <section id="flex" aria-labelledby="flexH" class="block">
+    <div class="block-head"><h2 id="flexH">Flexibility</h2></div>
+    <div class="grid cards" id="grid-flex"></div>
+  </section>
+
+  <section id="pilates" aria-labelledby="pilatesH" class="block">
+    <div class="block-head"><h2 id="pilatesH">Pilates</h2><span class="muted small">mat only · no equipment</span></div>
+    <div class="grid cards" id="grid-pilates"></div>
+  </section>
+
+  <section id="dance" aria-labelledby="danceH" class="block">
+    <div class="block-head"><h2 id="danceH">Dance</h2><span class="muted small">no equipment · just music and floor</span></div>
+    <div class="grid cards" id="grid-dance"></div>
+  </section>
+
+  <section id="sound" aria-labelledby="soundH" class="block">
+    <div class="block-head"><h2 id="soundH">Soundscapes</h2><span class="muted small">play on their own, or under any class</span></div>
+    <div class="grid sounds" id="grid-sound"></div>
+  </section>
+
+  <section id="lists" aria-labelledby="listsH" class="block">
+    <div class="block-head">
+      <h2 id="listsH">Playlists</h2>
+      <form class="inline-form" id="newPlaylistForm">
+        <label class="sr-only" for="newPlaylistName">New playlist name</label>
+        <input id="newPlaylistName" placeholder="New playlist name" maxlength="40" required>
+        <button type="submit" class="btn-dark">Create</button>
+      </form>
+    </div>
+    <div class="grid playlists" id="playlistGrid"></div>
+  </section>
+
+  <footer class="foot muted small">
+    Everything you add, keep or log is saved in this browser.
+    <button type="button" class="link-btn" id="exportBtn">Export my library</button> ·
+    <label class="link-btn file-label">Import<input type="file" id="importFile" accept="application/json" hidden></label>
+  </footer>
+</div>
+
+<dialog id="addDialog" aria-labelledby="addTitle">
+  <form method="dialog" class="dlg" id="addForm" novalidate>
+    <div class="dlg-head">
+      <h2 id="addTitle">Add to my library</h2>
+      <button type="button" class="icon-btn white" id="closeAdd" aria-label="Close">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div class="seg" role="tablist" aria-label="What to add">
+      <button type="button" role="tab" class="seg-btn active" data-kind="video" aria-selected="true">A video</button>
+      <button type="button" role="tab" class="seg-btn" data-kind="teacher" aria-selected="false">A teacher</button>
+    </div>
+
+    <div id="addVideoFields" class="dlg-body">
+      <label class="field">YouTube link
+        <input type="url" id="addUrl" placeholder="https://youtube.com/watch?v=…" autocomplete="off">
+      </label>
+      <p class="err" id="addUrlErr" hidden>That doesn't look like a YouTube video link.</p>
+      <div class="preview">
+        <img id="addThumb" alt="" hidden>
+        <div class="preview-blank" id="addThumbBlank"></div>
+        <div class="preview-text">
+          <label class="sr-only" for="addVidTitle">Title</label>
+          <input id="addVidTitle" class="bare strong" placeholder="Title fills in from the link">
+          <label class="sr-only" for="addVidChannel">Channel</label>
+          <input id="addVidChannel" class="bare" placeholder="Channel">
+        </div>
+      </div>
+      <fieldset class="field">
+        <legend>Where does it go?</legend>
+        <div class="chip-row" id="addSection"></div>
+      </fieldset>
+      <div class="field" id="addTeacherWrap" hidden>
+        <label for="addTeacher">Teacher (for my yoga path)</label>
+        <select id="addTeacher"></select>
+      </div>
+      <fieldset class="field">
+        <legend>Feel</legend>
+        <div class="chip-row" id="addFeel"></div>
+      </fieldset>
+      <fieldset class="field">
+        <legend>Level</legend>
+        <div class="chip-row" id="addLevel"></div>
+      </fieldset>
+      <label class="field">Length (minutes)
+        <input type="number" id="addMin" min="1" max="1440" placeholder="e.g. 30">
+      </label>
+      <label class="field">My note
+        <textarea id="addNote" rows="2" placeholder="e.g. great push-up cues, do on Mondays"></textarea>
+      </label>
+    </div>
+
+    <div id="addTeacherFields" class="dlg-body" hidden>
+      <label class="field">Teacher or school name
+        <input id="tName" placeholder="e.g. Sivananda Yoga Centre">
+      </label>
+      <label class="field">Style / where
+        <input id="tWhere" placeholder="e.g. Rishikesh · Hatha">
+      </label>
+      <label class="field">A first class to try (YouTube link, optional)
+        <input type="url" id="tUrl" placeholder="https://youtube.com/watch?v=…">
+      </label>
+    </div>
+
+    <p class="err" id="addErr" hidden></p>
+    <button type="submit" class="btn-primary" id="saveAdd">Save to library</button>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
