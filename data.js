@@ -36,6 +36,9 @@ window.CALM_DATA = {
     { id: "sarahbeth", name: "SarahBethYoga", where: "Short, clear Vinyasa flows", status: "totry", popular: true },
     { id: "boho", name: "Boho Beautiful Yoga", where: "Flowing full-body practices filmed outdoors", status: "totry", popular: true },
     { id: "travis", name: "Travis Eliot", where: "Power yoga · strong, long classes", status: "totry", popular: true },
+    { id: "charlie", name: "Charlie Follows", where: "30-min full body flows", status: "totry" },
+    { id: "tim", name: "Yoga With Tim", where: "Steady all-levels Vinyasa", status: "totry" },
+    { id: "bird", name: "Yoga With Bird", where: "Restorative & Yin", status: "totry" },
   ],
 
   videos: [
@@ -66,6 +69,35 @@ window.CALM_DATA = {
     { id: "6zzeSJxJS4s", section: "yoga", teacher: "boho", title: "30 Min Full Body Flow · Stretch, Breathe & Feel the Bliss", channel: "Boho Beautiful Yoga", min: 29, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "2.6M" },
     { id: "Y8vJqiePu1I", section: "yoga", teacher: "kassandra", title: "15 min Gentle Morning Yoga · Full Body Stretch", channel: "Yoga with Kassandra", min: 17, level: "beginner", feel: "gentle", style: "Gentle yoga", popular: true, views: "2.1M" },
     { id: "hHhxKkskHDg", section: "yoga", teacher: "kassandra", title: "30 min Morning Yoga · Feel Great", channel: "Yoga with Kassandra", min: 28, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "2M" },
+
+    // More full-length yoga (30 min+)
+    { id: "wCUI1bwlJqA", section: "yoga", teacher: "breatheflow", title: "Hips & Lower Back Will Feel So Much Better · Beginner Flow", channel: "Breathe and Flow", min: 33, level: "beginner", feel: "gentle", style: "Beginner flow", popular: true, views: "4.3M" },
+    { id: "t2UCGc4eUHo", section: "yoga", teacher: "breatheflow", title: "This 30 Minute Flow Will Expose How Well You Really Move", channel: "Breathe and Flow", min: 32, level: "all", feel: "flow", style: "Mobility flow", views: "570K" },
+    { id: "NZmPE0jQqpY", section: "yoga", teacher: "breatheflow", title: "This 30 Minute Flow Will Make Your Whole Body Work", channel: "Breathe and Flow", min: 30, level: "all", feel: "strong", style: "Vinyasa", views: "230K" },
+    { id: "aYloLsUsp4M", section: "yoga", teacher: "breatheflow", title: "This 35 Minute Flow Trains Your Body to Move as One", channel: "Breathe and Flow", min: 35, level: "all", feel: "flow", style: "Vinyasa", views: "240K" },
+    { id: "VfNY72G8Q0U", section: "yoga", teacher: "breatheflow", title: "The Practice You Need When You Can't Stop Pushing", channel: "Breathe and Flow", min: 37, level: "all", feel: "gentle", style: "Slow flow", views: "176K" },
+    { id: "YNvS1XUkjxQ", section: "yoga", teacher: "breatheflow", title: "45 Minute Practice · Day 1 IGNITE 28 Day Program", channel: "Breathe and Flow", min: 47, level: "intermediate", feel: "strong", style: "Vinyasa", views: "490K" },
+    { id: "P0UsdewWXLA", section: "yoga", teacher: "breatheflow", title: "The Practice You Need When Slowing Down Feels Impossible", channel: "Breathe and Flow", min: 49, level: "all", feel: "rest", style: "Slow flow & yin", views: "870K" },
+    { id: "YA5yr7wAMjo", section: "yoga", teacher: "breatheflow", title: "50 Minute Full Body Yin Yoga · Day 3 IGNITE", channel: "Breathe and Flow", min: 49, level: "all", feel: "rest", style: "Yin", views: "200K" },
+    { id: "f7_zx1sPBj0", section: "yoga", teacher: "breatheflow", title: "This 1 Hour Practice Will Push Your Body and Quiet Your Mind", channel: "Breathe and Flow", min: 52, level: "intermediate", feel: "strong", style: "Vinyasa", views: "336K" },
+    { id: "uv5e_MZ7erg", section: "yoga", teacher: "breatheflow", title: "1 Hour Practice That Tests More Than Your Strength (Not for Beginners)", channel: "Breathe and Flow", min: 61, level: "intermediate", feel: "strong", style: "Power vinyasa", views: "193K" },
+    { id: "qSG7PsdZG04", section: "yoga", teacher: "adriene", title: "60 Minute Total Body Workout", channel: "Yoga With Adriene", min: 61, level: "all", feel: "strong", style: "Vinyasa", popular: true, views: "5.9M" },
+    { id: "GAnKh5kKpgA", section: "yoga", teacher: "adriene", title: "Self Love Yoga · Full Class", channel: "Yoga With Adriene", min: 50, level: "all", feel: "flow", style: "Hatha Vinyasa", popular: true, views: "4.9M" },
+    { id: "vbgxIwQoyN4", section: "yoga", teacher: "adriene", title: "Detox and Reset · 40-Minute Practice", channel: "Yoga With Adriene", min: 41, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "3.5M" },
+    { id: "164zsYk4x9o", section: "yoga", teacher: "adriene", title: "Compassion Yoga · Core Strength Vinyasa", channel: "Yoga With Adriene", min: 58, level: "intermediate", feel: "strong", style: "Vinyasa", popular: true, views: "3.3M" },
+    { id: "rVkXRhDsGTU", section: "yoga", teacher: "travis", title: "60 Min Power Yoga · Detox Flow", channel: "Travis Eliot", min: 62, level: "intermediate", feel: "strong", style: "Power yoga", popular: true, views: "3.2M" },
+    { id: "2GyFyS6Zp5E", section: "yoga", teacher: "travis", title: "45 Min Power Yoga EDGE · Strength", channel: "Travis Eliot", min: 50, level: "intermediate", feel: "strong", style: "Power yoga", views: "746K" },
+    { id: "X4MchDHkJWw", section: "yoga", teacher: "kassandra", title: "45 min Slow Flow Deep Stretch Yoga", channel: "Yoga with Kassandra", min: 46, level: "all", feel: "gentle", style: "Slow flow", popular: true, views: "2.5M" },
+    { id: "mzf2kFNf8Yw", section: "yoga", teacher: "kassandra", title: "1 Hour Yin Yoga Class Without Props", channel: "Yoga with Kassandra", min: 55, level: "all", feel: "rest", style: "Yin", popular: true, views: "1.3M" },
+    { id: "ECoCf0PYX1s", section: "yoga", teacher: "kassandra", title: "45 min Intermediate Vinyasa · Full Body", channel: "Yoga with Kassandra", min: 47, level: "intermediate", feel: "strong", style: "Vinyasa", popular: true, views: "1.3M" },
+    { id: "IZSEVaxTtHc", section: "yoga", teacher: "boho", title: "60 Min Yoga for Flexibility, Mobility & Strength", channel: "Boho Beautiful Yoga", min: 72, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "1.5M" },
+    { id: "H4eimzWFcls", section: "yoga", teacher: "boho", title: "Full Body Yoga Flow · 60 Min", channel: "Boho Beautiful Yoga", min: 56, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "1.2M" },
+    { id: "bmMww1Wo6Tc", section: "yoga", teacher: "sivananda", title: "Sivananda Yoga Class · 60 min", channel: "Sivananda Yoga Centre, Gurgaon", min: 66, level: "all", feel: "gentle", style: "Classical Hatha", popular: true, views: "1.1M" },
+    { id: "PZB7EkWkj_M", section: "yoga", title: "45 Min Full Body Yoga Flow · Balance & Strength", channel: "Move With Nicole", min: 48, level: "all", feel: "flow", style: "Vinyasa", popular: true, views: "1.5M" },
+    { id: "ZFbEt_TzeNI", section: "yoga", teacher: "charlie", title: "30 Min Yoga to Feel Good · Mixed Levels", channel: "Charlie Follows", min: 32, level: "all", feel: "flow", style: "Vinyasa", views: "723K" },
+    { id: "W3LS7J68bic", section: "yoga", teacher: "charlie", title: "30 Min Yoga Flow · Strength & Flexibility", channel: "Charlie Follows", min: 31, level: "all", feel: "strong", style: "Vinyasa", views: "620K" },
+    { id: "WdOcag5C_DE", section: "yoga", teacher: "tim", title: "45 Min Morning Yoga Flow · All Levels", channel: "Yoga With Tim", min: 47, level: "all", feel: "flow", style: "Vinyasa", views: "155K" },
+    { id: "tV2FuUq2tBQ", section: "yoga", teacher: "bird", title: "30 Minute Restorative Yoga for Stress & Relaxation", channel: "Yoga With Bird", min: 33, level: "all", feel: "rest", style: "Restorative", views: "162K" },
 
     // ---------- Calisthenics ----------
     { id: "gOkCJ57IvNg", section: "move", title: "Home Workout for Beginners", channel: "Hybrid Calisthenics", min: 26, level: "beginner", feel: "strong", style: "Full body" },
@@ -147,10 +179,15 @@ window.CALM_DATA = {
     { id: "yEP2YrD-dyY", section: "sound", title: "Big Tibetan singing bowl", channel: "Meditative Mind", min: 71, level: "all", feel: "rest", style: "Singing bowls", popular: true, views: "9.2M" },
   ],
 
+  // Each playlist holds one kind of video (`kind` = a section id).
   playlists: [
-    { id: "morning-hatha", name: "Morning Hatha", items: ["CWIcRrBdk_k", "jsbAwAJz4tM", "_hHuczegZDs", "_noquwycq78"] },
-    { id: "strong-week", name: "Strong & steady", items: ["gOkCJ57IvNg", "dF2dXejdKHM", "OjcN6RzWFWs"] },
-    { id: "move-joy", name: "Move for joy", items: ["q7ytBN8eaiM", "TItIq0L0e58", "B4kNiCWTl7M"] },
+    { id: "morning-hatha", kind: "yoga", name: "Morning Hatha", items: ["CWIcRrBdk_k", "jsbAwAJz4tM", "_hHuczegZDs", "_noquwycq78"] },
+    { id: "breathe-flow", kind: "yoga", name: "Breathe and Flow favourites", items: ["wCUI1bwlJqA", "t2UCGc4eUHo", "P0UsdewWXLA", "f7_zx1sPBj0"] },
+    { id: "long-yoga", kind: "yoga", name: "Long yoga · 60 min+", items: ["qSG7PsdZG04", "lC5f2xqWBag", "bmMww1Wo6Tc", "IZSEVaxTtHc"] },
+    { id: "strong-steady", kind: "move", name: "Strong & steady", items: ["gOkCJ57IvNg", "TOXmdZ35CH0", "kuUZYUBHryw", "UItWltVZZmE"] },
+    { id: "daily-stretch", kind: "flex", name: "Daily stretch", items: ["L_xrDAtykMI", "g_tea8ZNk5A", "OjcN6RzWFWs", "CY6QP4ofwx4"] },
+    { id: "pilates-core", kind: "pilates", name: "Pilates on the mat", items: ["CdjRQ6GG8bA", "aOYcySi-kpU", "f9UbVRqd9YY", "C2HX2pNbUCM"] },
+    { id: "move-joy", kind: "dance", name: "Move for joy", items: ["q7ytBN8eaiM", "TItIq0L0e58", "vI5MzT-wIjs", "TcKGkEyoYGg"] },
   ],
 
   // Calisthenics progression ladders. `step` = index of the current rung.

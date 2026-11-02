@@ -33,8 +33,10 @@
 
   function defaultState() {
     return {
+      v: 2,
       name: "Julie",
       custom: [],
+      hidden: [],
       customTeachers: [],
       teacherStatus: {},
       kept: [],
@@ -61,10 +63,34 @@
       // New ladders added to data.js later still appear.
       const have = new Set(merged.ladders.map((l) => l.id));
       DATA.ladders.forEach((l) => { if (!have.has(l.id)) merged.ladders.push({ ...l, history: [] }); });
+      if (!saved.v || saved.v < 2) migrateToKindPlaylists(merged);
       return merged;
     } catch (e) {
       return base;
     }
+  }
+
+  // v2: every playlist holds a single kind. Old starter lists are swapped for the new ones;
+  // your own mixed lists are split into one list per kind.
+  function migrateToKindPlaylists(st) {
+    const OLD_STARTERS = ["morning-hatha", "strong-week", "move-joy"];
+    const lib = DATA.videos.concat(st.custom || []);
+    const sec = (id) => (lib.find((v) => v.id === id) || {}).section;
+    const out = JSON.parse(JSON.stringify(DATA.playlists));
+    (st.playlists || []).forEach((p) => {
+      if (OLD_STARTERS.includes(p.id)) return;
+      const groups = {};
+      p.items.forEach((id) => { const k = sec(id); if (k) (groups[k] = groups[k] || []).push(id); });
+      const kinds = Object.keys(groups);
+      if (!kinds.length) { out.push({ ...p, kind: null }); return; }
+      kinds.forEach((k, i) => {
+        const label = (DATA.sections.find((x) => x.id === k) || {}).label || k;
+        out.push({ id: kinds.length > 1 ? p.id + "-" + k : p.id, kind: k, name: kinds.length > 1 ? p.name + " · " + label : p.name, items: groups[k] });
+      });
+    });
+    st.playlists = out;
+    if (st.currentPlaylist && !out.some((p) => p.id === st.currentPlaylist)) st.currentPlaylist = out[0].id;
+    st.v = 2;
   }
 
   let state = loadState();
@@ -77,7 +103,7 @@
   /* Library helpers                                                    */
   /* ------------------------------------------------------------------ */
 
-  function allVideos() { return DATA.videos.concat(state.custom); }
+  function allVideos() { const h = state.hidden || []; return DATA.videos.filter((v) => !h.includes(v.id)).concat(state.custom); }
   function videoById(id) { return allVideos().find((v) => v.id === id) || null; }
   function allTeachers() { return DATA.teachers.concat(state.customTeachers); }
   function teacherById(id) { return allTeachers().find((t) => t.id === id) || null; }
@@ -139,12 +165,20 @@
   /* ------------------------------------------------------------------ */
 
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, actionLabel, action) {
     const t = $("#toast");
     t.textContent = msg;
+    if (actionLabel) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "toast-btn";
+      b.textContent = actionLabel;
+      b.addEventListener("click", () => { t.hidden = true; action(); });
+      t.appendChild(b);
+    }
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, 2600);
+    toastTimer = setTimeout(() => { t.hidden = true; }, actionLabel ? 7000 : 2600);
   }
 
   /* ------------------------------------------------------------------ */
@@ -287,7 +321,39 @@
   }
 
   function currentPlaylist() {
-    return state.playlists.find((p) => p.id === state.currentPlaylist) || state.playlists[0] || null;
+    const id = state.currentPlaylist || "";
+    if (id.startsWith("ch:")) {
+      const c = channelLists().find((x) => x.id === id);
+      if (c) return c;
+    }
+    return state.playlists.find((p) => p.id === id) || state.playlists[0] || null;
+  }
+
+  function playlistKind(p) {
+    if (p.kind) return p.kind;
+    const first = p.items.map(videoById).find(Boolean);
+    return first ? first.section : null;
+  }
+
+  /* Automatic playlists: every video in the library by one person/channel, one list per kind. */
+  const KIND_ORDER = ["yoga", "move", "flex", "pilates", "dance", "sound"];
+  function channelKey(kind, channel) { return "ch:" + kind + ":" + channel; }
+  function channelLists() {
+    const map = new Map();
+    allVideos().forEach((v) => {
+      if (!v.channel) return;
+      const key = channelKey(v.section, v.channel);
+      if (!map.has(key)) map.set(key, { id: key, kind: v.section, channel: v.channel, name: v.channel + " · " + sectionLabel(v.section), items: [], virtual: true });
+      map.get(key).items.push(v.id);
+    });
+    return Array.from(map.values()).sort((a, b) =>
+      KIND_ORDER.indexOf(a.kind) - KIND_ORDER.indexOf(b.kind) || b.items.length - a.items.length || a.channel.localeCompare(b.channel));
+  }
+
+  function mostCommon(list) {
+    const c = {};
+    list.forEach((x) => { if (x) c[x] = (c[x] || 0) + 1; });
+    return Object.keys(c).sort((a, b) => c[b] - c[a])[0] || "";
   }
 
   function step(dir, auto) {
@@ -360,12 +426,14 @@
       $("#nowNote").hidden = true;
       poster.removeAttribute("src");
       $("#keepBtn").disabled = true;
+      $("#removeNowBtn").disabled = true;
       $("#toPlaylistBtn").disabled = true;
       $("#ratePanel").hidden = true;
       if (!mainPlayer) showFrameMsg("Pick something calm.", "Choose any class below or a playlist on the right.", null);
       return;
     }
     $("#keepBtn").disabled = false;
+    $("#removeNowBtn").disabled = false;
     $("#toPlaylistBtn").disabled = false;
     const pl = currentPlaylist();
     const pos = pl ? pl.items.indexOf(v.id) : -1;
@@ -397,10 +465,14 @@
 
   function renderPlaylistSelect() {
     const sel = $("#playlistSelect");
-    sel.innerHTML = state.playlists.map((p) => '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>").join("");
-    if (!state.playlists.some((p) => p.id === state.currentPlaylist) && state.playlists[0]) {
-      state.currentPlaylist = state.playlists[0].id;
-    }
+    const chans = channelLists().filter((c) => c.kind !== "sound");
+    sel.innerHTML = '<optgroup label="My playlists">' +
+      state.playlists.map((p) => '<option value="' + esc(p.id) + '">' + esc(p.name) + "</option>").join("") +
+      '</optgroup><optgroup label="By person / channel">' +
+      chans.map((c) => '<option value="' + esc(c.id) + '">' + esc(c.name) + " (" + c.items.length + ")</option>").join("") +
+      "</optgroup>";
+    const known = state.playlists.some((p) => p.id === state.currentPlaylist) || chans.some((c) => c.id === state.currentPlaylist);
+    if (!known && state.playlists[0]) state.currentPlaylist = state.playlists[0].id;
     sel.value = state.currentPlaylist;
   }
 
@@ -456,7 +528,7 @@
       '<button type="button" class="btn-soft" data-keep="' + v.id + '" aria-pressed="' + kept + '" aria-label="' + (kept ? "Unkeep " : "Keep ") + esc(v.title) + '">' + (kept ? "♥ Kept" : "♡ Keep") + "</button>" +
       '<button type="button" class="btn-soft" data-addto="' + v.id + '" aria-haspopup="true">+ Playlist</button>' +
       '<span class="spacer"></span>' +
-      (isCustom(v.id) ? '<button type="button" class="icon-btn small" data-remove="' + v.id + '" aria-label="Remove ' + esc(v.title) + ' from my library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>' : "") +
+      '<button type="button" class="icon-btn small" data-remove="' + v.id + '" aria-label="Remove ' + esc(v.title) + ' from my library" title="Remove from my library"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg></button>' +
       "</div></article>";
   }
 
@@ -565,7 +637,7 @@
           ? '<button type="button" data-sound-off>Stop</button>'
           : '<button type="button" data-sound="' + v.id + '" aria-label="Play ' + esc(v.title) + ' underneath">Play underneath</button>') +
         '<button type="button" data-play-main="' + v.id + '" aria-label="Watch ' + esc(v.title) + ' in the main player">Watch</button>' +
-        (isCustom(v.id) ? '<button type="button" data-remove="' + v.id + '" aria-label="Remove ' + esc(v.title) + '">Remove</button>' : "") +
+        '<button type="button" data-remove="' + v.id + '" aria-label="Remove ' + esc(v.title) + ' from my library">Remove</button>' +
         "</div></div>";
     }).join("") || '<p class="empty">No soundscapes yet.</p>';
   }
@@ -593,6 +665,7 @@
       return '<article class="plist" data-plist="' + esc(p.id) + '">' +
         '<div class="plist-head"><label class="sr-only" for="pn-' + esc(p.id) + '">Playlist name</label>' +
         '<input id="pn-' + esc(p.id) + '" value="' + esc(p.name) + '" data-rename="' + esc(p.id) + '" maxlength="40">' +
+        '<span class="tag lilac">' + esc(sectionLabel(playlistKind(p) || "")) + "</span>" +
         '<span class="muted small">' + items.length + "</span></div>" +
         (items.length
           ? "<ol>" + items.map((v, i) => "<li>" +
@@ -609,11 +682,44 @@
     }).join("");
   }
 
+  function renderRestore() {
+    const n = (state.hidden || []).length;
+    $("#restoreWrap").hidden = !n;
+    $("#restoreBtn").textContent = "Restore " + n + " removed " + (n === 1 ? "video" : "videos");
+  }
+
+  function renderChannels() {
+    const lists = channelLists();
+    const box = $("#channelLists");
+    box.innerHTML = KIND_ORDER.map((kind, ki) => {
+      const ls = lists.filter((c) => c.kind === kind);
+      if (!ls.length) return "";
+      return '<details class="chan-group"' + (ki === 0 ? " open" : "") + "><summary>" + esc(sectionLabel(kind)) +
+        ' <span class="muted small">· ' + ls.length + (ls.length === 1 ? " person" : " people") + "</span></summary>" +
+        '<div class="chan-list">' + ls.map((c) => {
+          const pop = c.items.some((id) => (videoById(id) || {}).popular);
+          return '<div class="chan-row">' +
+            '<div class="chan-info"><b>' + esc(c.channel) + "</b>" +
+            '<span class="muted small">' + c.items.length + (c.items.length === 1 ? " video" : " videos") + (pop ? " · ★ popular" : "") + "</span></div>" +
+            (kind === "sound"
+              ? '<button type="button" class="btn-soft" data-sound="' + c.items[0] + '">Play underneath</button>'
+              : '<button type="button" class="btn-dark" data-play-list="' + esc(c.id) + '">Play all</button>') +
+            '<form class="chan-add" data-chan-add="' + esc(c.id) + '">' +
+            '<label class="sr-only" for="ca-' + esc(c.id) + '">Add a ' + esc(c.channel) + ' video by link</label>' +
+            '<input type="url" id="ca-' + esc(c.id) + '" placeholder="Paste a ' + esc(c.channel) + ' video link" autocomplete="off">' +
+            '<button type="submit" class="btn-soft">Add</button></form>' +
+            "</div>";
+        }).join("") + "</div></details>";
+    }).join("");
+  }
+
   function renderAll() {
+    renderRestore();
     renderGreeting();
     renderNav();
     renderNow();
     renderPlaylists();
+    renderChannels();
     renderQueue();
     renderAllGrids();
     renderTeachers();
@@ -635,10 +741,14 @@
     closePop();
     popFor = videoId;
     popAnchor = anchor;
-    pop.innerHTML = state.playlists.map((p) => {
-      const has = p.items.includes(videoId);
-      return '<button type="button" data-pop-pl="' + esc(p.id) + '">' + (has ? "✓ " : "") + esc(p.name) + "</button>";
-    }).join("") + '<button type="button" class="pop-new" data-pop-new>+ New playlist…</button>';
+    const v = videoById(videoId);
+    const kind = v ? v.section : null;
+    const same = state.playlists.filter((p) => { const k = playlistKind(p); return !k || k === kind; });
+    pop.innerHTML = (same.length ? "" : '<span class="pop-note">No ' + esc(sectionLabel(kind)) + " playlists yet</span>") +
+      same.map((p) => {
+        const has = p.items.includes(videoId);
+        return '<button type="button" data-pop-pl="' + esc(p.id) + '">' + (has ? "✓ " : "") + esc(p.name) + "</button>";
+      }).join("") + '<button type="button" class="pop-new" data-pop-new>+ New ' + esc(sectionLabel(kind)) + " playlist…</button>";
     // Place the popover next to whichever button opened it.
     const wrap = anchor.closest(".pop-wrap");
     if (wrap) wrap.appendChild(pop);
@@ -667,6 +777,13 @@
   function addToPlaylist(plId, videoId) {
     const p = state.playlists.find((x) => x.id === plId);
     if (!p) return;
+    const v = videoById(videoId);
+    const k = playlistKind(p);
+    if (v && k && k !== v.section && !p.items.includes(videoId)) {
+      toast(p.name + " is a " + sectionLabel(k) + " playlist");
+      return;
+    }
+    if (!p.kind && v) p.kind = v.section;
     if (p.items.includes(videoId)) {
       p.items = p.items.filter((x) => x !== videoId);
       toast("Removed from " + p.name);
@@ -680,12 +797,13 @@
     renderNow();
   }
 
-  function newPlaylist(name, firstItem) {
+  function newPlaylist(name, firstItem, kind) {
     const clean = (name || "").trim().slice(0, 40);
     if (!clean) return null;
     let id = clean.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "list";
     while (state.playlists.some((p) => p.id === id)) id += "-2";
-    const p = { id, name: clean, items: firstItem ? [firstItem] : [] };
+    const fv = firstItem ? videoById(firstItem) : null;
+    const p = { id, kind: fv ? fv.section : (kind || null), name: clean, items: firstItem ? [firstItem] : [] };
     state.playlists.push(p);
     save();
     renderPlaylists();
@@ -705,18 +823,38 @@
     renderNav();
   }
 
-  function removeCustom(id) {
+  function removeVideo(id) {
     const v = videoById(id);
-    if (!v || !isCustom(id)) return;
-    if (!confirm("Remove “" + v.title + "” from your library?")) return;
-    state.custom = state.custom.filter((x) => x.id !== id);
+    if (!v) return;
+    closePop();
+    const before = JSON.stringify(state);
+    if (isCustom(id)) state.custom = state.custom.filter((x) => x.id !== id);
+    else state.hidden = (state.hidden || []).concat(id);
     state.kept = state.kept.filter((x) => x !== id);
     state.playlists.forEach((p) => { p.items = p.items.filter((x) => x !== id); });
-    delete state.notes[id];
     if (state.sound === id) stopSound();
+    if (state.current === id) {
+      const p = currentPlaylist();
+      state.current = (p && p.items.find((x) => videoById(x))) || null;
+      if (mainPlayer && typeof mainPlayer.stopVideo === "function") mainPlayer.stopVideo();
+    }
     save();
     renderAll();
-    toast("Removed");
+    toast("Removed “" + v.title + "”", "Undo", function () {
+      state = JSON.parse(before);
+      save();
+      renderAll();
+      toast("Back in your library");
+    });
+  }
+
+  function restoreAll() {
+    const n = (state.hidden || []).length;
+    if (!n) return;
+    state.hidden = [];
+    save();
+    renderAll();
+    toast(n === 1 ? "1 video restored" : n + " videos restored");
   }
 
   document.addEventListener("click", function (e) {
@@ -731,7 +869,7 @@
     if (d.playMain) { select(d.playMain, { play: true, scroll: true, asMain: true }); return; }
     if (d.keep) { toggleKeep(d.keep); return; }
     if (d.addto) { openPop(t, d.addto); return; }
-    if (d.remove) { removeCustom(d.remove); return; }
+    if (d.remove) { removeVideo(d.remove); return; }
     if (d.popPl !== undefined) { const vid = popFor; closePop(); addToPlaylist(d.popPl, vid); return; }
     if (d.popNew !== undefined) {
       const vid = popFor;
@@ -823,6 +961,8 @@
   $("#bigPlay").addEventListener("click", function () {
     if (state.current) playMain(state.current);
   });
+  $("#removeNowBtn").addEventListener("click", function () { if (state.current) removeVideo(state.current); });
+  $("#restoreBtn").addEventListener("click", restoreAll);
   $("#keepBtn").addEventListener("click", function () { if (state.current) toggleKeep(state.current); });
   $("#toPlaylistBtn").addEventListener("click", function (e) {
     e.stopPropagation();
@@ -874,6 +1014,11 @@
 
   document.addEventListener("submit", function (e) {
     const f = e.target;
+    if (f.dataset.chanAdd) {
+      e.preventDefault();
+      addToChannel(f.dataset.chanAdd, f.querySelector("input"));
+      return;
+    }
     if (f.dataset.log) {
       e.preventDefault();
       const input = f.querySelector("input");
@@ -892,7 +1037,7 @@
   $("#newPlaylistForm").addEventListener("submit", function (e) {
     e.preventDefault();
     const input = $("#newPlaylistName");
-    const p = newPlaylist(input.value);
+    const p = newPlaylist(input.value, null, $("#newPlaylistKind").value);
     if (p) { input.value = ""; toast("Created " + p.name); }
   });
 
@@ -915,6 +1060,40 @@
       if (a) a.focus();
     }
   });
+
+  function addToChannel(key, input) {
+    const c = channelLists().find((x) => x.id === key);
+    if (!c) return;
+    const id = parseYouTubeId(input.value);
+    if (!id) { toast("Paste a YouTube video link"); input.focus(); return; }
+    if (videoById(id)) { toast("That video is already in your library"); input.value = ""; return; }
+    const siblings = c.items.map(videoById).filter(Boolean);
+    const btn = input.nextElementSibling;
+    btn.disabled = true;
+    btn.textContent = "Adding…";
+    fetch("https://www.youtube.com/oembed?format=json&url=" + encodeURIComponent(watchUrl(id)))
+      .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then((j) => {
+        const v = {
+          id, section: c.kind, channel: c.channel, title: j.title || "Video by " + c.channel, min: 0,
+          level: mostCommon(siblings.map((x) => x.level)) || "all",
+          feel: mostCommon(siblings.map((x) => x.feel)) || "flow",
+          style: mostCommon(siblings.map((x) => x.style)),
+        };
+        const teacher = mostCommon(siblings.map((x) => x.teacher));
+        if (teacher) v.teacher = teacher;
+        state.custom.push(v);
+        save();
+        renderAll();
+        const other = j.author_name && j.author_name.toLowerCase() !== c.channel.toLowerCase();
+        toast("Added to " + c.channel + (other ? " (YouTube lists it under " + j.author_name + ")" : ""));
+      })
+      .catch(() => {
+        btn.disabled = false;
+        btn.textContent = "Add";
+        toast("Couldn't find that video — it may be private or removed.");
+      });
+  }
 
   /* Export / import */
   $("#exportBtn").addEventListener("click", function () {

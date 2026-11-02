@@ -414,6 +414,36 @@ dialog::backdrop { background: rgba(58,34,50,.45); }
   box-shadow: 0 10px 30px rgba(58,34,50,.25); max-width: calc(100vw - 32px);
 }
 
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast-btn {
+  border: none; background: var(--pink); color: var(--ink); font-weight: 600; font-size: 14px;
+  padding: 8px 14px; border-radius: 10px; min-height: 40px;
+}
+
+.kind-select {
+  padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); min-height: 44px;
+}
+.pop-note { padding: 10px 12px; font-size: 13px; color: var(--muted); }
+.chan-groups { display: flex; flex-direction: column; gap: 10px; }
+.chan-group { background: var(--card); border-radius: var(--radius); padding: 6px 16px; }
+.chan-group summary {
+  cursor: pointer; padding: 12px 0; font-family: var(--serif); font-size: 20px; list-style-position: inside;
+}
+.chan-list { display: flex; flex-direction: column; padding-bottom: 10px; }
+.chan-row {
+  display: grid; grid-template-columns: minmax(160px, 1fr) auto minmax(220px, 1.4fr); gap: 10px; align-items: center;
+  padding: 10px 0; border-top: 1px solid var(--bg);
+}
+.chan-info { display: flex; flex-direction: column; min-width: 0; }
+.chan-info b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; }
+.chan-add { display: flex; gap: 6px; min-width: 0; }
+.chan-add input {
+  flex: 1; min-width: 0; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line);
+  background: var(--bg); min-height: 44px; font-size: 14px;
+}
+.chan-add .btn-soft { background: var(--bg); }
+.plist-head .tag { flex: none; }
+
 /* ---------- Phone ---------- */
 @media (max-width: 720px) {
   .wrap { padding: 20px 16px 48px; gap: 32px; }
@@ -434,6 +464,8 @@ dialog::backdrop { background: rgba(58,34,50,.45); }
   .cards, .teachers, .ladders, .playlists { grid-template-columns: 1fr; }
   .sounds { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .sound-tile { min-height: 110px; padding: 14px; font-size: 15px; }
+  .chan-row { grid-template-columns: 1fr auto; }
+  .chan-add { grid-column: 1 / -1; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -76,6 +76,7 @@
             <div class="pop" id="playlistPop" hidden></div>
           </div>
           <button type="button" class="btn-soft" id="soundUnderBtn" aria-expanded="false" aria-controls="soundPanel">Sound under it</button>
+          <button type="button" class="btn-soft" id="removeNowBtn">Remove</button>
         </div>
       </div>
 
@@ -177,16 +178,30 @@
       <form class="inline-form" id="newPlaylistForm">
         <label class="sr-only" for="newPlaylistName">New playlist name</label>
         <input id="newPlaylistName" placeholder="New playlist name" maxlength="40" required>
+        <label class="sr-only" for="newPlaylistKind">Kind</label>
+        <select id="newPlaylistKind" class="kind-select">
+          <option value="yoga">Yoga</option>
+          <option value="move">Calisthenics</option>
+          <option value="flex">Flexibility</option>
+          <option value="pilates">Pilates</option>
+          <option value="dance">Dance</option>
+        </select>
         <button type="submit" class="btn-dark">Create</button>
       </form>
     </div>
     <div class="grid playlists" id="playlistGrid"></div>
+    <div class="block-head">
+      <h3 class="sub">By person / channel</h3>
+      <span class="muted small">Every video in your library from one person, one list per kind. Paste a link to add more of theirs.</span>
+    </div>
+    <div id="channelLists" class="chan-groups"></div>
   </section>
 
   <footer class="foot muted small">
     Everything you add, keep or log is saved in this browser.
     <button type="button" class="link-btn" id="exportBtn">Export my library</button> ·
     <label class="link-btn file-label">Import<input type="file" id="importFile" accept="application/json" hidden></label>
+    <span id="restoreWrap" hidden> · <button type="button" class="link-btn" id="restoreBtn">Restore removed videos</button></span>
   </footer>
 </div>
 
