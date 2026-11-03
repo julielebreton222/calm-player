@@ -7,7 +7,7 @@ Plain HTML, CSS and JavaScript — no build step. Live at https://julielebreton2
 ## Places
 
 - **Welcome:** opens with “In the true man there is a child hidden — it wants to play.” (Nietzsche, *Thus Spoke Zarathustra*, Thomas Common's public-domain translation) and starts the calm noise.
-- **Playground (home):** I want to scroll… · I just did something · Pick one for me · tiles to every place · My people · this week, gently · gentle mode to hide all numbers.
+- **Playground (home):** just for breathing and catching me: a breathing flower (in 4, out 6), one quote at a time from fiction and non-fiction (tap “another”), “Remember to play”, and two buttons — I want to scroll… and I don't know what to do with myself (one suggestion, two minutes). My people live at the bottom of Things I love; gentle mode is in the footer.
 - **Things I love:** tiny things (2–5 min) and cozy things, each with tiny prompts. **Just 2 min** skips the questions. Things I tend to avoid, for 10 brave minutes.
 - **Compost:** drop ideas you can't do yet. An 8-bit heap grows every 5 ideas (worm → sprout → leaves → bud → lily → awake lily → garden). Try an idea later, or mark “I did it”.
 - **Meditate:** 5–60 min, interval bells, Tibetan singing bowl / deep bowl / small bell (generated in the browser, works offline).

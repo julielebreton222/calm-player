@@ -426,66 +426,69 @@
     return '<svg width="' + (size || 22) + '" height="' + (size || 22) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
   }
 
-  // Short lines to open the playground with. Attributed lines are real quotations; the rest are my own words or yours.
+  // Little lines to catch me. Short quotations, credited; the last few are what I remember from my people.
   const QUOTES = [
     { q: "In the true man there is a child hidden — it wants to play.", by: "Friedrich Nietzsche, Thus Spoke Zarathustra" },
+    { q: "Curiouser and curiouser!", by: "Alice, in Lewis Carroll's Alice's Adventures in Wonderland" },
+    { q: "Who in the world am I? Ah, that's the great puzzle!", by: "Alice, in Alice's Adventures in Wonderland" },
+    { q: "Why, sometimes I've believed as many as six impossible things before breakfast.", by: "the White Queen, in Lewis Carroll's Through the Looking-Glass" },
+    { q: "It's no use going back to yesterday, because I was a different person then.", by: "Alice, in Alice's Adventures in Wonderland" },
+    { q: "You were much more… muchier. You've lost your muchness.", by: "the Mad Hatter, in the film Alice in Wonderland (2010)" },
+    { q: "If you look the right way, you can see that the whole world is a garden.", by: "Frances Hodgson Burnett, The Secret Garden" },
+    { q: "Where you tend a rose, my lad, a thistle cannot grow.", by: "Frances Hodgson Burnett, The Secret Garden" },
+    { q: "Isn't it nice to think that tomorrow is a new day with no mistakes in it yet?", by: "Anne, in L. M. Montgomery's Anne of Green Gables" },
+    { q: "I'm so glad I live in a world where there are Octobers.", by: "Anne, in Anne of Green Gables" },
+    { q: "I am large, I contain multitudes.", by: "Walt Whitman, Song of Myself" },
+    { q: "I celebrate myself, and sing myself.", by: "Walt Whitman, Song of Myself" },
+    { q: "Pay attention. Be astonished. Tell about it.", by: "Mary Oliver, “Sometimes”" },
+    { q: "Tell me, what is it you plan to do with your one wild and precious life?", by: "Mary Oliver, “The Summer Day”" },
+    { q: "Not all those who wander are lost.", by: "J. R. R. Tolkien, The Fellowship of the Ring" },
+    { q: "Play is the work of the child.", by: "Maria Montessori" },
+    { q: "The creation of something new is not accomplished by the intellect but by the play instinct.", by: "Carl Jung, Psychological Types" },
     { q: "Child spirit. Doing me, with joy.", by: "what I remember from Kitty Lever" },
     { q: "Hard work and curiosity.", by: "what I remember from Xenia Adonts" },
     { q: "Art comes out of loneliness. It is good.", by: "what I remember from Heaven Sent Honey" },
   ];
-  function todaysQuote() { return QUOTES[Math.floor(Date.now() / 864e5) % QUOTES.length]; }
+  let quoteIx = Math.floor(Math.random() * QUOTES.length);
+  function todaysQuote() { return QUOTES[quoteIx % QUOTES.length]; }
 
   function renderToday() {
     const el = $("#tab-today");
-    const week = sessionsIn("week");
-    const mins = week.reduce((n, s) => n + (s.minutes || 0), 0);
-    const urges = week.filter((s) => (s.reasons || []).length).length;
-    const days = new Set(week.map((s) => dayKey(s.start))).size;
-    const yogaWeek = (S.yoga || []).filter((y) => y.t >= rangeStart("week")).length;
-    const ideas = (S.compost || []).filter((c) => !c.done).length;
     const q = todaysQuote();
-    const h = new Date().getHours();
-    const hello = h < 5 ? "Still up, " : h < 12 ? "Good morning, " : h < 18 ? "Hello, " : "Good evening, ";
-    const tile = (href, ic, title, line, cls) =>
-      '<a class="tile ' + (cls || "") + '" href="' + href + '"><span class="tile-ic">' + icon(ic, 26) + '</span><b>' + esc(title) + "</b><span>" + esc(line) + "</span></a>";
     el.innerHTML =
-      '<section class="play-hero">' +
-      '<div class="play-face">' + mascot(118, "sleepy") + "</div>" +
-      '<div class="play-text"><span class="eyebrow">' + esc(greeting()) + "</span>" +
-      "<h1>" + esc(hello + S.name) + ". What shall we play with?</h1>" +
-      '<p class="play-quote">“' + esc(q.q) + '” <span>— ' + esc(q.by) + "</span></p>" +
-      '<div class="hero-btns">' +
-      '<button type="button" class="btn-primary soft" data-h-urge>I want to scroll…</button>' +
-      '<button type="button" class="btn-soft big" data-h-moment>I just did something</button>' +
-      '<button type="button" class="btn-soft big" data-h-pick>Pick one for me</button></div>' +
-      (S.active ? '<button type="button" class="btn-primary soft resume" data-h-resume>Back to my ' + esc((passionById(S.active.passion) || {}).name || "session") + "</button>" : "") +
-      "</div></section>" +
+      '<section class="home">' +
+      (S.active ? '<button type="button" class="resume-pill" data-h-resume>Back to my ' + esc((passionById(S.active.passion) || {}).name || "session") + "</button>" : "") +
+      '<div class="breath" aria-hidden="true"><div class="breath-glow"></div><div class="breath-flower">' + mascot(150, "sleepy") + "</div></div>" +
+      '<p class="breath-words" aria-live="off"><span class="in">breathe in</span><span class="out">breathe out</span></p>' +
+      '<figure class="home-quote"><blockquote>“' + esc(q.q) + "”</blockquote><figcaption>— " + esc(q.by) + "</figcaption>" +
+      '<button type="button" class="link-btn" data-h-quote>another</button></figure>' +
+      '<p class="home-remind">Remember to play.</p>' +
+      '<div class="home-catch">' +
+      '<button type="button" class="catch-btn" data-h-urge>I want to scroll…</button>' +
+      '<button type="button" class="catch-btn soft" data-h-onething>I don\'t know what to do with myself</button>' +
+      "</div>" +
+      '<button type="button" class="link-btn home-moment" data-h-moment>I just did something — keep it</button>' +
+      "</section>";
+  }
 
-      '<section class="block"><h2 class="sr-only">Places in my playground</h2><div class="tiles">' +
-      tile("#/passions", "passions", "Things I love", "tiny things to start with", "t-pink") +
-      tile("#/compost", "compost", "Compost", ideas ? ideas + (ideas === 1 ? " idea resting" : " ideas resting") : "keep ideas for later", "t-green") +
-      tile("#/meditate", "meditate", "Meditate", "a timer with singing bowls", "t-blue") +
-      tile("#/move", "move", "Move & yoga", yogaWeek ? yogaWeek + " yoga this week" : "yoga, dance, stretch", "t-peach") +
-      tile("#/sounds", "sounds", "Sounds", "calm noise, playlists, Spotify", "t-lilac") +
-      tile("#/journal", "journal", "Journal", "everything I did, kindly", "t-pink") +
-      tile("#/spells", "spells", "Spell book", "little magic for real life", "t-blue") +
-      tile("#people", "people", "My people", "what I remember from them", "t-peach") +
-      "</div></section>" +
-
-      '<section class="block soft-stats"><div class="block-head"><h2>This week, gently</h2></div><div class="mini-stats">' +
-      "<div><b>" + fmtMin(mins) + "</b><span>with myself, doing things</span></div>" +
-      "<div><b>" + days + (days === 1 ? " day" : " days") + "</b><span>I played</span></div>" +
-      "<div><b>" + urges + "</b><span>scroll urges turned into something</span></div></div></section>" +
-
-      '<section class="block" id="people"><div class="block-head"><h2>My people · what I remember from them</h2>' +
-      '<span class="muted small">Shown during every session, one at a time</span></div>' + peopleHtml() + "</section>" +
-
-      '<section class="block"><div class="block-head"><h2>Lately</h2><a href="#/journal">My journal</a></div>' +
-      (S.sessions.length
-        ? '<div class="sess-list">' + S.sessions.slice(-3).reverse().map((s) => sessionRow(s, false)).join("") + "</div>"
-        : '<p class="empty">Whatever you do will gather here, like petals. Tap “I just did something” any time.</p>') +
-      "</section>" +
-      '<p class="gentle-line"><button type="button" class="link-btn" data-h-gentle>' + (S.gentle ? "Show numbers again" : "Gentle mode: hide numbers and counts") + "</button></p>";
+  /* ---------- "I don't know what to do with myself": one thing, one button ---------- */
+  let oneIx = -1;
+  function renderOneThing(next) {
+    const pool = suggestFor([], "").map((x) => x.p).concat(passions().filter((p) => TINY.includes(p.id)));
+    const uniq = pool.filter((p, i) => pool.findIndex((x) => x.id === p.id) === i);
+    oneIx = next ? (oneIx + 1) % uniq.length : Math.floor(Math.random() * uniq.length);
+    const p = uniq[oneIx];
+    openFlow();
+    $("#flowInner").innerHTML =
+      '<div class="flow-top"><span class="eyebrow">Just one thing</span>' +
+      '<button type="button" class="icon-btn" data-h-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      '<div class="moment-face">' + mascot(110, "awake") + "</div>" +
+      '<h2 id="flowTitle" class="flow-h center">How about… ' + esc(p.name.toLowerCase()) + "?</h2>" +
+      '<p class="one-step">' + esc(promptFor(p)) + "</p>" +
+      '<p class="muted small center">You don\'t have to feel like it. Two minutes, and you\'re allowed to stop.</p>' +
+      '<button type="button" class="btn-primary" data-h-two="' + esc(p.id) + '">Let\'s play for 2 minutes</button>' +
+      '<div class="flow-btns"><button type="button" class="btn-ghost-dark" data-h-one-next>Something else</button>' +
+      '<button type="button" class="btn-ghost-dark" data-h-start="' + esc(p.id) + '">Ask me first</button></div>';
   }
 
   function suggestCard(p, why) {
@@ -525,7 +528,9 @@
           '<button type="button" class="btn-dark" data-h-start="' + esc(t.id) + '">10 brave minutes</button>' +
           '<button type="button" class="btn-soft" data-h-del-task="' + esc(t.id) + '" aria-label="Remove ' + esc(t.name) + '">Remove</button></div>';
       }).join("") +
-      '<button type="button" class="chip dashed" data-h-add-task>+ Add what I\'m avoiding</button></div></section>';
+      '<button type="button" class="chip dashed" data-h-add-task>+ Add what I\'m avoiding</button></div></section>' +
+      '<section class="block" id="people"><div class="block-head"><h2>My people · what I remember from them</h2>' +
+      '<span class="muted small">Shown during every session, one at a time</span></div>' + peopleHtml() + "</section>";
   }
 
   function passionCard(p) {
@@ -1196,6 +1201,9 @@
 
     if (d.hUrge !== undefined) { startCheckIn(""); return; }
     if (d.hMoment !== undefined) { openMoment(); return; }
+    if (d.hQuote !== undefined) { quoteIx++; renderToday(); return; }
+    if (d.hOnething !== undefined) { renderOneThing(false); return; }
+    if (d.hOneNext !== undefined) { renderOneThing(true); return; }
     if (d.hMMin !== undefined) { momentDraft.minutes = Number(d.hMMin); renderMoment(); return; }
     if (d.hPickMfeel) { toggle(momentDraft.feelings, d.hPickMfeel); renderMoment(); return; }
     if (d.hMSave !== undefined) { saveMoment(); return; }
@@ -1204,7 +1212,11 @@
       if (!draft.passion) { toast("Pick what you'd like to do first"); $("#hPassion").focus(); return; }
       draft.skipped = true; draft.reasons = []; draft.feelings = []; begin(); return;
     }
-    if (d.hGentle !== undefined) { S.gentle = !S.gentle; save(); renderToday(); document.body.classList.toggle("gentle", S.gentle); return; }
+    if (d.hGentle !== undefined) {
+      S.gentle = !S.gentle; save(); document.body.classList.toggle("gentle", S.gentle);
+      b.textContent = S.gentle ? "Show numbers again" : "Gentle mode: hide numbers";
+      toast(S.gentle ? "Numbers hidden" : "Numbers back"); return;
+    }
     if (d.hMpMin) { S.medMinutes = Number(d.hMpMin); save(); renderMeditate(); return; }
     if (d.hMpInt !== undefined) { S.medInterval = Number(d.hMpInt); save(); renderMeditate(); return; }
     if (d.hMpSound) { S.medSound = d.hMpSound; save(); ringBell(d.hMpSound, 1); renderMeditate(); return; }
@@ -1254,11 +1266,11 @@
       const sub = (prompt("A longer line in your own words (optional)", p ? p.sub || "" : "") || "").trim();
       if (p) Object.assign(p, { name, line, sub });
       else S.people.push({ id: uid(), name, line, sub });
-      save(); renderToday(); return;
+      save(); renderPassions(); return;
     }
     if (d.hDelPerson) {
       const p = S.people.find((x) => x.id === d.hDelPerson);
-      if (p && confirm("Remove " + p.name + " from My people?")) { S.people = S.people.filter((x) => x !== p); forget(p.id); save(); renderToday(); }
+      if (p && confirm("Remove " + p.name + " from My people?")) { S.people = S.people.filter((x) => x !== p); forget(p.id); save(); renderPassions(); }
       return;
     }
     // flow
@@ -1418,6 +1430,8 @@
   route();
   updateNoiseBtn();
   document.body.classList.toggle("gentle", !!S.gentle);
+  const gb = $("#gentleBtn");
+  if (gb) gb.textContent = S.gentle ? "Show numbers again" : "Gentle mode: hide numbers";
   showSplash();
   if (S.active) {
     const a = S.active;
