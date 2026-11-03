@@ -2,8 +2,8 @@
  * The app's own files are cached so it opens with no internet.
  * Your files in "My files" live in the browser's IndexedDB, not here.
  * YouTube videos still need a connection. */
-const CACHE = "playground-v20261103e";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./sw.js", "./hangout.js", "./sync.js"];
+const CACHE = "playground-v20261103f";
+const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./apple-touch-icon.png", "./favicon-32.png", "./sw.js", "./hangout.js", "./sync.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
