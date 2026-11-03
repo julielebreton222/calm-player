@@ -265,6 +265,7 @@
   function soundTitle(id) {
     if (!id) return "";
     if (id.startsWith("list:")) return BG.name ? "“" + BG.name + "” playlist" : "My playlist";
+    if (id.startsWith("local:")) return (localById(id.slice(6)) || {}).name || "My file";
     return ((videoById(id) || bgById(id)) || {}).title || "Background sound";
   }
   function isListPlaying() { return (state.sound || "").startsWith("list:"); }
@@ -300,6 +301,7 @@
   }
 
   function startSound(id) {
+    stopLocal();
     state.sound = id;
     afterSoundStart();
     withYT(function () {
@@ -320,6 +322,7 @@
 
   function startBgList(shuffle) {
     if (!BG.playlistId) return;
+    stopLocal();
     state.sound = "list:" + BG.playlistId;
     afterSoundStart();
     const startAt = shuffle ? Math.floor(Math.random() * Math.max(1, BG.items.length)) : 0;
@@ -349,10 +352,139 @@
     state.sound = null;
     save();
     if (soundPlayer && typeof soundPlayer.stopVideo === "function") soundPlayer.stopVideo();
+    stopLocal();
+    renderSoundChips();
+    renderSoundGrid();
+    renderBgGrid();
+    renderShelf();
+    updateBgBar();
+  }
+
+  /* ---------- My files: audio/video kept in this browser (IndexedDB), playable offline ---------- */
+  const FILES_DB = "calm-player-files";
+  let localFiles = [];
+  let localUrl = null;
+  const localAudio = $("#localAudio");
+
+  function idb() {
+    return new Promise((res, rej) => {
+      const r = indexedDB.open(FILES_DB, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore("files", { keyPath: "id" });
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+  }
+  function idbTx(mode, fn) {
+    return idb().then((db) => new Promise((res, rej) => {
+      const tx = db.transaction("files", mode);
+      const out = fn(tx.objectStore("files"));
+      tx.oncomplete = () => res(out && out.result !== undefined ? out.result : out);
+      tx.onerror = () => rej(tx.error);
+      tx.onabort = () => rej(tx.error);
+    }));
+  }
+  function loadLocalFiles() {
+    if (!("indexedDB" in window)) return Promise.resolve([]);
+    return idbTx("readonly", (st) => st.getAll()).then((all) => {
+      localFiles = (all || []).sort((a, b) => a.added - b.added);
+      return localFiles;
+    }).catch(() => []);
+  }
+  function cleanName(n) {
+    return n.replace(/\.[^.]+$/, "").replace(/^[0-9a-f]{8}-/, "").replace(/[_]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+  function fmtSize(b) { return b >= 1e6 ? (b / 1e6).toFixed(1) + " MB" : Math.max(1, Math.round(b / 1e3)) + " KB"; }
+  function isLocalPlaying() { return (state.sound || "").startsWith("local:"); }
+  function localById(id) { return localFiles.find((f) => f.id === id) || null; }
+
+  function addLocalFiles(fileList) {
+    const files = Array.from(fileList || []).filter((f) => /^(audio|video)\//.test(f.type) || /\.(mp3|m4a|aac|wav|ogg|oga|flac|opus|mp4|webm)$/i.test(f.name));
+    if (!files.length) { toast("Pick audio or video files"); return; }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    let added = 0;
+    const jobs = files.map((f) => {
+      const rec = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), name: cleanName(f.name), type: f.type || "audio/mpeg", size: f.size, added: Date.now(), blob: f };
+      return idbTx("readwrite", (st) => st.put(rec)).then(() => { added++; }).catch(() => {});
+    });
+    Promise.all(jobs).then(loadLocalFiles).then(() => {
+      renderShelf();
+      renderSoundChips();
+      toast(added === files.length
+        ? (added === 1 ? "Saved — plays offline now" : added + " files saved — they play offline now")
+        : "Some files didn't fit in this browser's storage");
+    });
+  }
+
+  function removeLocal(id) {
+    const f = localById(id);
+    if (!f || !confirm("Remove “" + f.name + "” from My files on this device?")) return;
+    if (state.sound === "local:" + id) stopSound();
+    idbTx("readwrite", (st) => st.delete(id)).then(loadLocalFiles).then(() => {
+      renderShelf();
+      renderSoundChips();
+      toast("Removed");
+    });
+  }
+
+  function stopLocal() {
+    if (!localAudio.paused) localAudio.pause();
+  }
+
+  function playLocal(id) {
+    const f = localById(id);
+    if (!f) return;
+    if (soundPlayer && typeof soundPlayer.stopVideo === "function") soundPlayer.stopVideo();
+    if (localUrl) URL.revokeObjectURL(localUrl);
+    localUrl = URL.createObjectURL(f.blob);
+    localAudio.src = localUrl;
+    localAudio.loop = true;
+    localAudio.volume = state.soundVol / 100;
+    state.sound = "local:" + id;
+    localAudio.play().catch(() => toast("Tap play again — your browser wants a tap first"));
+    if ("mediaSession" in navigator && window.MediaMetadata) {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: f.name, artist: "My files", album: "My Calm Player" });
+      try {
+        navigator.mediaSession.setActionHandler("play", () => localAudio.play());
+        navigator.mediaSession.setActionHandler("pause", () => localAudio.pause());
+        navigator.mediaSession.setActionHandler("stop", stopSound);
+      } catch (e) { /* older browsers */ }
+    }
+    renderShelf();
     renderSoundChips();
     renderSoundGrid();
     renderBgGrid();
     updateBgBar();
+  }
+
+  function renderShelf() {
+    const grid = $("#grid-files");
+    if (!grid) return;
+    if (!localFiles.length) {
+      grid.innerHTML = '<p class="empty">Nothing here yet. Add audio or video files from this device — they stay on this device and play with no internet.</p>';
+    } else {
+      grid.innerHTML = localFiles.map((f) => {
+        const on = state.sound === "local:" + f.id;
+        return '<article class="bg-tile file-tile' + (on ? " on" : "") + '">' +
+          '<span class="file-icon" aria-hidden="true"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18V5l11-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg></span>' +
+          '<div class="bg-text"><b>' + esc(f.name) + "</b><span>" + fmtSize(f.size) + " · saved on this device</span></div>" +
+          '<div class="file-actions">' +
+          (on
+            ? '<button type="button" class="bg-btn" data-sound-off>Stop</button>'
+            : '<button type="button" class="bg-btn" data-local-play="' + f.id + '" aria-label="Play ' + esc(f.name) + '">Play</button>') +
+          '<button type="button" class="bg-btn" data-local-remove="' + f.id + '" aria-label="Remove ' + esc(f.name) + '">Remove</button>' +
+          "</div></article>";
+      }).join("");
+    }
+    const info = $("#storageInfo");
+    if (navigator.storage && navigator.storage.estimate) {
+      Promise.all([navigator.storage.estimate(), navigator.storage.persisted ? navigator.storage.persisted() : Promise.resolve(false)])
+        .then(([est, kept]) => {
+          const used = localFiles.reduce((n, f) => n + (f.size || 0), 0);
+          info.textContent = localFiles.length + (localFiles.length === 1 ? " file · " : " files · ") + fmtSize(used) +
+            (est && est.quota ? " of about " + fmtSize(est.quota) + " available" : "") +
+            (kept ? " · kept permanently" : "");
+        }).catch(() => {});
+    }
   }
 
   function updateBgBar() {
@@ -366,7 +498,9 @@
       if (d && d.title) now = d.title;
     }
     $("#bgNowTitle").textContent = now;
-    $("#bgNowKind").textContent = isListPlaying() ? "Background · " + (BG.name || "playlist") : "Playing underneath";
+    $("#bgNowKind").textContent = isListPlaying() ? "Background · " + (BG.name || "playlist") : isLocalPlaying() ? "My files · offline" : "Playing underneath";
+    $("#soundMiniWrap").hidden = isLocalPlaying();
+    $("#localIcon").hidden = !isLocalPlaying();
     $("#bgPrev").hidden = $("#bgNext").hidden = !isListPlaying();
     $("#bgVol").value = state.soundVol;
   }
@@ -479,6 +613,7 @@
     const links = DATA.sections.map((s) => ({ href: "#" + s.id, label: s.label }));
     if (state.kept.length) links.unshift({ href: "#kept", label: "♡ Kept" });
     if (BG.items.length) links.push({ href: "#background", label: "Background" });
+    links.push({ href: "#shelf", label: "My files" });
     links.push({ href: "#lists", label: "Playlists" });
     $("#nav").innerHTML = links.map((l) => '<a href="' + l.href + '">' + esc(l.label) + "</a>").join("");
     observeSections();
@@ -740,7 +875,10 @@
   }
 
   function renderSoundChips() {
-    const chips = [{ id: "", title: "Off" }].concat(BG.playlistId ? [{ id: "list:" + BG.playlistId, title: "My background playlist" }] : [], soundList());
+    const chips = [{ id: "", title: "Off" }].concat(
+      BG.playlistId ? [{ id: "list:" + BG.playlistId, title: "My background playlist" }] : [],
+      localFiles.map((f) => ({ id: "local:" + f.id, title: f.name + " (offline)" })),
+      soundList());
     $("#soundChips").innerHTML = chips.map((s) =>
       '<button type="button" class="chip" data-sound-chip="' + s.id + '" aria-pressed="' + ((state.sound || "") === s.id) + '">' + esc(s.title) + "</button>"
     ).join("");
@@ -992,9 +1130,12 @@
     if (d.soundChip !== undefined) {
       if (!d.soundChip) stopSound();
       else if (d.soundChip.startsWith("list:")) startBgList(false);
+      else if (d.soundChip.startsWith("local:")) playLocal(d.soundChip.slice(6));
       else startSound(d.soundChip);
       return;
     }
+    if (d.localPlay) { playLocal(d.localPlay); return; }
+    if (d.localRemove) { removeLocal(d.localRemove); return; }
     if (d.bgPlay) { startSound(d.bgPlay); toast("Playing in the background"); return; }
     if (d.bgGroup !== undefined) { state.bgGroup = d.bgGroup; save(); renderBgGrid(); return; }
     if (d.filter) {
@@ -1092,15 +1233,25 @@
     state.soundVol = Number(this.value);
     $("#bgVol").value = state.soundVol;
     if (soundPlayer && typeof soundPlayer.setVolume === "function") soundPlayer.setVolume(state.soundVol);
+    localAudio.volume = state.soundVol / 100;
     save();
   });
   $("#bgVol").addEventListener("input", function () {
     state.soundVol = Number(this.value);
     $("#soundVol").value = state.soundVol;
     if (soundPlayer && typeof soundPlayer.setVolume === "function") soundPlayer.setVolume(state.soundVol);
+    localAudio.volume = state.soundVol / 100;
     save();
   });
   $("#bgStop").addEventListener("click", stopSound);
+  $("#addFiles").addEventListener("change", function () { addLocalFiles(this.files); this.value = ""; });
+  ["dragenter", "dragover"].forEach((ev) => $("#shelf").addEventListener(ev, () => $("#shelf").classList.add("drag")));
+  ["dragleave", "drop"].forEach((ev) => $("#shelf").addEventListener(ev, () => $("#shelf").classList.remove("drag")));
+  const shelfEl = $("#shelf");
+  ["dragover", "drop"].forEach((ev) => shelfEl.addEventListener(ev, (e) => {
+    e.preventDefault();
+    if (ev === "drop") addLocalFiles(e.dataTransfer.files);
+  }));
   $("#bgNext").addEventListener("click", () => { if (soundPlayer && soundPlayer.nextVideo) soundPlayer.nextVideo(); });
   $("#bgPrev").addEventListener("click", () => { if (soundPlayer && soundPlayer.previousVideo) soundPlayer.previousVideo(); });
   $("#bgPlayAll").addEventListener("click", () => startBgList(false));
@@ -1420,4 +1571,14 @@
   // Don't auto-resume a soundscape on load (browsers block it); show it as off.
   if (state.sound) { state.sound = null; save(); renderSoundChips(); renderSoundGrid(); }
   setInterval(renderGreeting, 10 * 60 * 1000);
+  loadLocalFiles().then(() => { renderShelf(); renderSoundChips(); });
+
+  // Offline: cache the app so it opens with no internet (needs https or localhost).
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("sw.js").then(() => navigator.serviceWorker.ready).then((reg) => {
+      const urls = [location.pathname, "manifest.webmanifest", "icon-192.png", "icon-512.png"]
+        .concat($$('link[rel="stylesheet"], script[src]').map((el) => el.href || el.src));
+      if (reg.active) reg.active.postMessage({ type: "cache", urls });
+    }).catch(() => {});
+  }
 })();
