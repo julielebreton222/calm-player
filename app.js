@@ -1571,6 +1571,24 @@
   // Don't auto-resume a soundscape on load (browsers block it); show it as off.
   if (state.sound) { state.sound = null; save(); renderSoundChips(); renderSoundGrid(); }
   setInterval(renderGreeting, 10 * 60 * 1000);
+
+  // Small bridge so My Hangout (hangout.js) can offer sounds during a session.
+  window.CalmPlayer = {
+    soundOptions: function () {
+      return [{ id: "", title: "Off" }].concat(
+        BG.playlistId ? [{ id: "list:" + BG.playlistId, title: "My background playlist" }] : [],
+        localFiles.map((f) => ({ id: "local:" + f.id, title: f.name + " (offline)" })),
+        soundList().map((v) => ({ id: v.id, title: v.title })));
+    },
+    playSound: function (id) {
+      if (!id) stopSound();
+      else if (id.startsWith("list:")) startBgList(false);
+      else if (id.startsWith("local:")) playLocal(id.slice(6));
+      else startSound(id);
+    },
+    currentSound: function () { return state.sound || ""; },
+    stopSound: stopSound,
+  };
   loadLocalFiles().then(() => { renderShelf(); renderSoundChips(); });
 
   // Offline: cache the app so it opens with no internet (needs https or localhost).

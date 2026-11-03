@@ -1,7 +1,7 @@
 {
-  "name": "My Calm Player",
-  "short_name": "Calm Player",
-  "description": "Yoga, movement, background sounds and my own files — offline, no ads.",
+  "name": "My Hangout",
+  "short_name": "My Hangout",
+  "description": "My passions, movement, sounds, journal and spell book — instead of scrolling.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

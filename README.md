@@ -1,8 +1,18 @@
-# My Calm Player
+# My Hangout
 
-A calm, distraction-free player for yoga, calisthenics, flexibility, Pilates, dance and soundscapes: only the classes you love, without comments, recommendations or the YouTube feed.
+A calm place to go instead of scrolling: my passions, a before → during → after session tracker, a journal that shows what really lifts my mood, the people who inspire me, a spell book, and all my movement classes, background sounds and offline files.
 
-Plain HTML, CSS and JavaScript. There's no build step and nothing to install.
+Plain HTML, CSS and JavaScript. There's no build step and nothing to install. Live at https://julielebreton222.github.io/calm-player/
+
+## Tabs
+
+- **Today:** "I feel the urge to scroll" button, this week's stats (time on passions, urges turned into something else, average mood lift, streak), My people, suggestions for how I feel right now, and recent sessions.
+- **Passions:** 14 passions, each with tiny first steps — drawing, listening to music, making playlists, dancing, fairytales, learning about yoga, playing with dolls, morning pages, journaling, singing/humming/chanting, talking to myself out loud, nature with no phone, creating a magic spell, and a curiosity of the week. Add my own.
+- **Session flow:** before (what pulled me here, the thought word for word, feelings, mood 1–10) → doing (timer, prompt, a reminder from my people, sound underneath, a place to park urges, pages/notes) → after (feelings, mood, lift, one line). Survives a reload.
+- **Move:** the Calm Player — yoga, calisthenics, flexibility, Pilates, dance, soundscapes, playlists, yoga path, ladders.
+- **Sounds & files:** my YouTube background playlist and My files (offline).
+- **Journal:** minutes per day, what lifts me most, what pulls me toward scrolling, thoughts that come back, patterns, every session.
+- **Spell book:** 12 original spells plus my own.
 
 ## Run it
 
