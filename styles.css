@@ -1075,7 +1075,33 @@ body.splash-open { overflow: hidden; }
   .catch-btn { flex-basis: 100%; }
 }
 
+/* tiny 8-bit sprouts for compost ideas */
+.sprout { width: 40px; height: 44px; flex: none; image-rendering: pixelated; }
+.sprout.big { width: 120px; height: 130px; }
+.sprout-plant { transform-origin: 45% 70%; animation: pixsway 2.2s steps(2, jump-none) infinite; }
+.sprout.big .sprout-plant { animation: pixsway 1.6s steps(2, jump-none) infinite, pixgrow .9s steps(4) 1 both; }
+@keyframes pixgrow { from { transform: translateY(2px); opacity: .3; } to { transform: translateY(0); opacity: 1; } }
+.mix-btn[aria-pressed="true"] { background: #EAF5E5 !important; border-color: #86C276; color: #2F5D3A !important; font-weight: 700; }
+.compost-item { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+.compost-item > .sprout { grid-row: span 1; }
+.compost-item > div { flex-basis: auto !important; }
+.compost-item > button { grid-column: auto; }
+.compost-item .c-actions { display: contents; }
+@media (min-width: 821px) {
+  .compost-item { grid-template-columns: auto minmax(0, 1fr) auto auto auto auto; }
+}
+@media (max-width: 820px) {
+  .compost-item { grid-template-columns: auto minmax(0, 1fr) auto; row-gap: 10px; }
+  .compost-item > .btn-soft { grid-row: 2; font-size: 14px; padding: 10px 8px; }
+  .compost-item > .mix-btn { grid-column: 1 / 3; }
+  .compost-item > [data-h-idea-try] { grid-column: 3; }
+  .compost-item > [data-h-idea-done] { grid-row: 3; grid-column: 1 / 3; }
+  .compost-item > .icon-btn { grid-row: 3; grid-column: 3; justify-self: center; }
+  .compost-list.grew .compost-item { grid-template-columns: auto minmax(0, 1fr); }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .sprout-plant, .sprout.big .sprout-plant { animation: none !important; }
   .breath-glow, .breath-flower, .breath-words .in, .breath-words .out { animation: none !important; }
   .breath-words .out { display: none; }
   .mascot, .play-face .mascot, .med-head .mascot, .splash-inner .mascot, .heap-plant, .heap-box.grew { animation: none !important; }

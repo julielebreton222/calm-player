@@ -334,6 +334,7 @@
     else window.scrollTo({ top: 0 });
   }
   function route() {
+    if (!$("#flow").hidden) { $("#flow").hidden = true; document.body.classList.remove("flow-open"); clearInterval(tick); tick = null; }
     const h = decodeURIComponent(location.hash || "");
     if (h.startsWith("#/")) { showTab(h.slice(2) === "playground" ? "today" : h.slice(2)); return; }
     if (h.length > 1) {
@@ -475,6 +476,7 @@
   let oneIx = -1;
   function renderOneThing(next) {
     const pool = suggestFor([], "").map((x) => x.p).concat(passions().filter((p) => TINY.includes(p.id)));
+    inMix().forEach((c) => { pool.push(ideaAsPassion(c)); pool.push(ideaAsPassion(c)); }); // ideas from my compost come up a bit more often
     const uniq = pool.filter((p, i) => pool.findIndex((x) => x.id === p.id) === i);
     oneIx = next ? (oneIx + 1) % uniq.length : Math.floor(Math.random() * uniq.length);
     const p = uniq[oneIx];
@@ -482,8 +484,12 @@
     $("#flowInner").innerHTML =
       '<div class="flow-top"><span class="eyebrow">Just one thing</span>' +
       '<button type="button" class="icon-btn" data-h-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
-      '<div class="moment-face">' + mascot(110, "awake") + "</div>" +
-      '<h2 id="flowTitle" class="flow-h center">How about… ' + esc(p.name.toLowerCase()) + "?</h2>" +
+      (p.idea
+        ? (() => { const c = S.compost.find((x) => "idea:" + x.id === p.id); const dd = restDays(c);
+            return '<div class="moment-face">' + sprout(dd, "big") + "</div>" +
+              '<p class="muted small center">From your compost · resting ' + (dd ? dd + (dd === 1 ? " day" : " days") : "since today") + " — it's " + SPROUT_WORDS[sproutStage(dd)] + " now</p>"; })()
+        : '<div class="moment-face">' + mascot(110, "awake") + "</div>") +
+      '<h2 id="flowTitle" class="flow-h center">How about… ' + esc(p.idea ? p.name : p.name.toLowerCase()) + "?</h2>" +
       '<p class="one-step">' + esc(promptFor(p)) + "</p>" +
       '<p class="muted small center">You don\'t have to feel like it. Two minutes, and you\'re allowed to stop.</p>' +
       '<button type="button" class="btn-primary" data-h-two="' + esc(p.id) + '">Let\'s play for 2 minutes</button>' +
@@ -810,6 +816,10 @@
       reasons: a.reasons, thought: a.thought, before: a.before, after: a.after,
       note: (a.note || "").trim(), notes: (a.notes || "").trim(), parked: a.parked, prompt: a.prompt,
     });
+    if (a.passion && a.passion.startsWith("idea:")) {
+      const c = (S.compost || []).find((x) => "idea:" + x.id === a.passion);
+      if (c && !c.done) c.done = Date.now();
+    }
     S.active = null;
     save();
     closeFlow();
@@ -975,6 +985,34 @@
       '<g class="heap-soil">' + px.map(rect).join("") + "</g>" +
       '<g class="heap-plant">' + plant.map(rect).join("") + "</g></svg>";
   }
+  function restDays(c) { return Math.floor((Date.now() - c.t) / 864e5); }
+  function sproutStage(days) { return days >= 21 ? 5 : days >= 14 ? 4 : days >= 7 ? 3 : days >= 3 ? 2 : days >= 1 ? 1 : 0; }
+  const SPROUT_WORDS = ["a seed", "a sprout", "two leaves", "a little plant", "a bud", "a flower"];
+  function sprout(days, cls) {
+    const st = sproutStage(days);
+    const px = [], pl = [];
+    const put = (x, y, c, arr) => (arr || px).push([x, y, c]);
+    // pot
+    for (let x = 2; x <= 9; x++) put(x, 9, "pr");
+    for (let x = 3; x <= 8; x++) { put(x, 10, "pt"); put(x, 11, "pt"); }
+    for (let x = 4; x <= 7; x++) put(x, 12, "pd");
+    for (let x = 3; x <= 8; x++) put(x, 8, "s2");
+    if (st === 0) put(5, 7, "s3", pl);
+    if (st >= 1) { put(5, 7, "g1", pl); put(5, 6, "g1", pl); put(4, 6, "g2", pl); }
+    if (st >= 2) { put(6, 5, "g2", pl); put(7, 5, "g2", pl); put(5, 5, "g1", pl); }
+    if (st >= 3) { put(5, 4, "g1", pl); put(5, 3, "g1", pl); put(3, 5, "g2", pl); put(4, 4, "g2", pl); }
+    if (st === 4) { put(5, 2, "p1", pl); put(4, 2, "p2", pl); put(6, 2, "p2", pl); put(5, 1, "p1", pl); }
+    if (st >= 5) {
+      [[5, 0], [3, 1], [4, 1], [6, 1], [7, 1], [3, 3], [7, 3], [4, 3], [6, 3]].forEach(([x, y]) => put(x, y, (x + y) % 2 ? "p1" : "p2", pl));
+      put(4, 2, "p2", pl); put(6, 2, "p2", pl); put(5, 2, "y", pl); put(5, 1, "p2", pl); put(3, 2, "d", pl); put(7, 2, "d", pl);
+    }
+    const col = Object.assign({ pr: "#E07E5E", pt: "#C8664A", pd: "#A4503A" }, PX);
+    const rect = ([x, y, c]) => '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + col[c] + '"/>';
+    return '<svg class="sprout ' + (cls || "") + '" viewBox="0 0 12 13" shape-rendering="crispEdges" role="img" aria-label="' + SPROUT_WORDS[st] + '">' +
+      px.map(rect).join("") + '<g class="sprout-plant">' + pl.map(rect).join("") + "</g></svg>";
+  }
+  function inMix() { return (S.compost || []).filter((c) => c.mix && !c.done); }
+
   const STAGE_NAMES = ["Fresh soil", "A worm moved in", "A sprout!", "Leaves", "A bud", "A lily", "A lily that's awake", "A little garden"];
   function renderCompost() {
     const el = $("#tab-compost");
@@ -990,11 +1028,13 @@
       '<div class="heap-info"><b class="heap-stage">' + esc(STAGE_NAMES[Math.min(stage, 7)]) + "</b>" +
       '<span class="muted">' + (toNext === 5 && added ? "It just grew! " : "") + toNext + (toNext === 1 ? " more idea" : " more ideas") + " until it grows again</span>" +
       '<div class="heap-bar" aria-hidden="true">' + Array.from({ length: 5 }, (_, i) => '<span class="' + (i < added % 5 ? "on" : "") + '"></span>').join("") + "</div></div></div>" +
+      '<p class="muted small">“Add to the mix” puts an idea into the random ideas for <b>I don\'t know what to do with myself</b> on the home page. Each idea\'s little plant grows the longer it rests.</p>' +
       '<form class="compost-add" data-h-compost-form><label class="sr-only" for="compostText">An idea for later</label>' +
       '<input id="compostText" placeholder="An idea for something I could do…" maxlength="140" autocomplete="off"><button type="submit" class="btn-dark">Add to compost</button></form>' +
       (resting.length ? '<h2 class="sub-h">Resting in the compost</h2><div class="compost-list">' + resting.map((c) =>
-        '<div class="compost-item"><span class="c-dot" aria-hidden="true"></span><div><b>' + esc(c.text) + '</b><span class="muted small">' +
-        new Date(c.t).toLocaleDateString(undefined, { day: "numeric", month: "short" }) + "</span></div>" +
+        '<div class="compost-item">' + sprout(restDays(c)) + '<div><b>' + esc(c.text) + '</b><span class="muted small">' +
+        (restDays(c) ? "resting " + restDays(c) + (restDays(c) === 1 ? " day" : " days") + " · " + SPROUT_WORDS[sproutStage(restDays(c))] : "planted today") + "</span></div>" +
+        '<button type="button" class="btn-soft mix-btn" data-h-idea-mix="' + esc(c.id) + '" aria-pressed="' + !!c.mix + '">' + (c.mix ? "✓ In the mix" : "Add to the mix") + "</button>" +
         '<button type="button" class="btn-soft" data-h-idea-try="' + esc(c.id) + '">Try it now</button>' +
         '<button type="button" class="btn-soft" data-h-idea-done="' + esc(c.id) + '">I did it</button>' +
         '<button type="button" class="icon-btn small" data-h-idea-del="' + esc(c.id) + '" aria-label="Remove idea"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>').join("") + "</div>"
@@ -1026,9 +1066,12 @@
       '<input id="spotifyUrl" placeholder="https://open.spotify.com/playlist/…" autocomplete="off"><button type="submit" class="btn-dark">Add</button></form>' +
       (list.length ? '<div class="spotify-list">' + list.map((x) =>
         '<div class="spotify-item"><iframe title="Spotify ' + esc(x.type) + '" src="https://open.spotify.com/embed/' + esc(x.type) + "/" + esc(x.sid) +
-        '?utm_source=generator" width="100%" height="' + (x.type === "track" || x.type === "episode" ? 152 : 352) + '" frameborder="0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>' +
+        '?utm_source=generator" width="100%" height="' + (x.type === "track" || x.type === "episode" ? 152 : 352) + '" frameborder="0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture; storage-access"></iframe>' +
         '<button type="button" class="link-btn" data-h-spotify-del="' + esc(x.id) + '">Remove</button></div>').join("") + "</div>"
-        : '<p class="empty">No Spotify links yet. Log in to Spotify in this browser to hear full songs instead of 30-second previews.</p>') +
+        : '<p class="empty">No Spotify links yet.</p>') +
+      '<p class="muted small spotify-help">Full songs play when you\'re logged in to Spotify in this same browser — ' +
+      '<a href="https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F" target="_blank" rel="noopener">log in to Spotify here</a>, then come back and reload. ' +
+      "If a player still plays 30-second previews, tap its Spotify logo or the “Log in” button inside the player.</p>" +
       "</section>";
     const v = $("#noiseVol");
     if (v) v.addEventListener("input", function () { S.noise = S.noise || {}; S.noise.vol = Number(this.value) / 100; save(); noiseLevel(); });
@@ -1227,6 +1270,11 @@
     }
     if (d.hYogaPlus !== undefined) { countYoga("", ""); toast("Yoga counted. Lovely."); return; }
     if (d.hYogaUndo !== undefined) { const y = (S.yoga || []).pop(); if (y) forget(y.id); save(); renderYoga(); return; }
+    if (d.hIdeaMix) {
+      const c = S.compost.find((x) => x.id === d.hIdeaMix);
+      if (c) { c.mix = !c.mix; save(); renderCompost(); toast(c.mix ? "Added to your random ideas" : "Taken out of the mix"); }
+      return;
+    }
     if (d.hIdeaTry) { startCheckIn("idea:" + d.hIdeaTry); return; }
     if (d.hIdeaDone) { const c = S.compost.find((x) => x.id === d.hIdeaDone); if (c) { c.done = Date.now(); save(); renderCompost(); toast("It grew into something real"); } return; }
     if (d.hIdeaDel) { if (confirm("Remove this idea? It stays in the soil — the heap won't shrink.")) { S.compost = S.compost.filter((x) => x.id !== d.hIdeaDel); forget(d.hIdeaDel); save(); renderCompost(); } return; }

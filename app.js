@@ -820,7 +820,7 @@
       const colour = SWATCHES[teachers.indexOf(t) % SWATCHES.length];
       return '<article class="teacher' + (s === "no" ? " no" : "") + '">' +
         '<div class="teacher-top"><span class="avatar" style="background:' + colour + '" aria-hidden="true">' + esc(t.name.charAt(0)) + "</span>" +
-        '<div><div class="teacher-name">' + esc(t.name) + '</div><div class="teacher-where">' + esc(t.where || "") + "</div>" + (t.popular ? '<span class="tag pop">★ Popular channel</span>' : "") + "</div></div>" +
+        '<div><div class="teacher-name">' + esc(t.name) + '</div><div class="teacher-where">' + esc(t.where || "") + "</div>" + "</div></div>" +
         '<div class="teacher-meta">' + classes.length + (classes.length === 1 ? " class" : " classes") + " in my library</div>" +
         '<div class="status-row" role="group" aria-label="Status for ' + esc(t.name) + '">' +
         STATUSES.map((st) => '<button type="button" class="status-btn" data-teacher="' + esc(t.id) + '" data-s="' + st.id + '" aria-pressed="' + (s === st.id) + '">' + st.label + "</button>").join("") +
