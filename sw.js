@@ -2,8 +2,8 @@
  * The app's own files are cached so it opens with no internet.
  * Your files in "My files" live in the browser's IndexedDB, not here.
  * YouTube videos still need a connection. */
-const CACHE = "my-hangout-v20261103c";
-const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./sw.js", "./hangout.js"];
+const CACHE = "my-hangout-v20261103d";
+const SHELL = ["./", "./index.html", "./manifest.webmanifest", "./icon-192.png", "./icon-512.png", "./sw.js", "./hangout.js", "./sync.js"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

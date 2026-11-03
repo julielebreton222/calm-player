@@ -7,12 +7,17 @@ Plain HTML, CSS and JavaScript. There's no build step and nothing to install. Li
 ## Tabs
 
 - **Today:** "I feel the urge to scroll" button, this week's stats (time on passions, urges turned into something else, average mood lift, streak), My people, suggestions for how I feel right now, and recent sessions.
-- **Passions:** 14 passions, each with tiny first steps — drawing, listening to music, making playlists, dancing, fairytales, learning about yoga, playing with dolls, morning pages, journaling, singing/humming/chanting, talking to myself out loud, nature with no phone, creating a magic spell, and a curiosity of the week. Add my own.
+- **Passions:** 16 passions, each with tiny first steps — drawing, listening to music, making playlists, dancing, fairytales, learning about yoga, playing with dolls, making a song, meditation, morning pages, journaling, singing/humming/chanting, talking to myself out loud, nature with no phone, creating a magic spell, and a curiosity of the week. Add my own, plus **Things I tend to avoid** (work, emails…) for 10 brave minutes when scrolling is really avoiding.
+- **Meditation:** 5–60 min timer with a Tibetan singing bowl, deep bowl or small bell at the start, at intervals (1/2/5/10 min) and three at the end. The sounds are generated in the browser, so they work offline.
 - **Session flow:** before (what pulled me here, the thought word for word, feelings, mood 1–10) → doing (timer, prompt, a reminder from my people, sound underneath, a place to park urges, pages/notes) → after (feelings, mood, lift, one line). Survives a reload.
 - **Move:** the Calm Player — yoga, calisthenics, flexibility, Pilates, dance, soundscapes, playlists, yoga path, ladders.
 - **Sounds & files:** my YouTube background playlist and My files (offline).
 - **Journal:** minutes per day, what lifts me most, what pulls me toward scrolling, thoughts that come back, patterns, every session.
 - **Spell book:** 12 original spells plus my own.
+
+## Sync across devices
+
+Footer → **Sync across my devices**. Paste a GitHub token that only has the `gist` permission (one per device, or reuse it). Everything the app saves goes into one private gist in your account, “My Hangout sync (private)”, and is combined entry by entry, so journal sessions are never lost and deletions stay deleted. Files in My files stay on each device.
 
 ## Run it
 

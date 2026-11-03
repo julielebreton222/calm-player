@@ -717,6 +717,29 @@ body.flow-open { overflow: hidden; }
   .ring b { font-size: 38px; }
 }
 
+/* sync */
+.sync-line { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin: 0 0 10px; }
+.sync-steps { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
+.sync-ok { margin: 0; font-weight: 600; color: #2F5D3A; }
+#syncBody p { margin: 0; line-height: 1.5; }
+#syncBody code { background: var(--card); padding: 1px 6px; border-radius: 6px; }
+
+/* meditation */
+.med-set { background: var(--card); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.med-set .chip { font-size: 14px; }
+
+/* things I'm avoiding */
+.chip.dashed { background: transparent; border: 2px dashed var(--line); color: var(--accent); font-weight: 600; }
+.field.avoid { background: var(--card); border-radius: 16px; padding: 12px 14px; }
+.field.avoid.on { background: #F3DCC8; }
+.avoid-list { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.avoid-row {
+  width: 100%; box-sizing: border-box; background: var(--card); border-radius: 16px; padding: 12px 14px;
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+}
+.avoid-row > div { flex: 1 1 200px; display: flex; flex-direction: column; gap: 2px; }
+.avoid-row .btn-soft { background: var(--bg); }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
 }

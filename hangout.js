@@ -77,6 +77,22 @@
       "Sing one song all the way through, out loud.",
       "Chant along with Om Namo Bhagavate Vasudevaya from My files.",
     ] },
+    { id: "meditation", name: "Meditation", color: "#D5DDCF", meditation: true, energy: ["low", "restless", "curious"], prompts: [
+      "Sit comfortably. Follow the breath at the tip of your nose, in and out.",
+      "Count breaths from one to ten, then begin again. Lost count? Start at one, kindly.",
+      "Listen to the sounds around you without naming them.",
+      "Body scan: move your attention slowly from the crown of your head down to your toes.",
+      "With each out-breath, silently say: let go.",
+      "Rest your attention on the space between two bells.",
+    ] },
+    { id: "song", name: "Making a song", color: "#B9C7E8", energy: ["make", "restless", "curious"], prompts: [
+      "Hum a melody into a voice memo. Don't judge it — just keep the one you like.",
+      "Write four lines about how today felt. Then sing them to any tune.",
+      "Pick one feeling and make a chorus from a single line that says it.",
+      "Tap a rhythm on the table, then hum something over it.",
+      "Take a line from your morning pages and turn it into a lyric.",
+      "Record a verse, a chorus, and the verse again. That's a song.",
+    ] },
     { id: "talking", name: "Talking to myself out loud", color: "#DCD3E6", energy: ["restless", "low"], prompts: [
       "Tell yourself how today really went, like to a friend.",
       "Talk through a decision you're stuck on, out loud, for 5 minutes.",
@@ -175,6 +191,8 @@
     return {
       name: "Julie",
       customPassions: [],
+      tasks: [],
+      deleted: [],
       hiddenPassions: [],
       promptIndex: {},
       sessions: [],
@@ -193,12 +211,40 @@
     try { const raw = localStorage.getItem(KEY); return raw ? { ...defaults(), ...JSON.parse(raw) } : defaults(); }
     catch (e) { return defaults(); }
   })();
+  function forget(id) { S.deleted = (S.deleted || []).concat(id).slice(-2000); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep working in memory */ } }
 
   function passions() {
     return PASSIONS.concat(S.customPassions).filter((p) => !S.hiddenPassions.includes(p.id));
   }
-  function passionById(id) { return PASSIONS.concat(S.customPassions).find((p) => p.id === id) || null; }
+  const TASK_PROMPTS = [
+    "Just 10 minutes. Start with the smallest possible piece.",
+    "Write down the very next step, then do only that.",
+    "Set the timer and work until it rings — then you're allowed to stop.",
+    "Open the thing. That's the whole first step.",
+    "Do the worst five minutes first, then reward yourself with a passion.",
+  ];
+  function taskAsPassion(t) { return { id: t.id, name: t.name, color: "#D9BFC5", task: true, energy: [], prompts: TASK_PROMPTS }; }
+  function tasks() { return (S.tasks || []).map(taskAsPassion); }
+  function passionById(id) { return PASSIONS.concat(S.customPassions, tasks()).find((p) => p.id === id) || null; }
+  function addTask(name) {
+    const clean = (name || "").trim().slice(0, 50);
+    if (!clean) return null;
+    const existing = (S.tasks || []).find((t) => t.name.toLowerCase() === clean.toLowerCase());
+    if (existing) return existing.id;
+    const t = { id: "t-" + uid(), name: clean };
+    S.tasks = (S.tasks || []).concat(t);
+    save();
+    return t.id;
+  }
+  function addPassion(name, step) {
+    const clean = (name || "").trim().slice(0, 40);
+    if (!clean) return null;
+    const p = { id: "c-" + uid(), name: clean, color: "#DCD3E6", custom: true, energy: ["make", "curious", "low", "restless"], prompts: step ? [step] : [] };
+    S.customPassions.push(p);
+    save();
+    return p.id;
+  }
   function promptFor(p) {
     const list = p.prompts && p.prompts.length ? p.prompts : ["Do it for 15 minutes, just for the joy of it."];
     const i = (S.promptIndex[p.id] || 0) % list.length;
@@ -393,7 +439,17 @@
       '<div class="chip-row" role="group" aria-label="Session length"><span class="muted small">How long?</span>' +
       TIMES.map((t) => '<button type="button" class="chip" data-h-minutes="' + t.m + '" aria-pressed="' + (S.minutes === t.m) + '">' + t.label + "</button>").join("") + "</div>" +
       '<div class="grid passions">' + passions().map(passionCard).join("") +
-      '<button type="button" class="passion add" data-h-add-passion>+ Add a passion</button></div></section>';
+      '<button type="button" class="passion add" data-h-add-passion>+ Add a passion</button></div></section>' +
+      '<section class="block avoid-block"><div class="block-head"><h2>Things I tend to avoid</h2>' +
+      '<span class="muted small">When scrolling is really avoiding, do 10 brave minutes of one of these</span></div>' +
+      '<div class="avoid-list">' + tasks().map((t) => {
+        const st = passionStats(t.id);
+        return '<div class="avoid-row"><div><b>' + esc(t.name) + '</b><span class="muted small">' +
+          (st.n ? fmtMin(st.mins) + " this week" : "Not yet this week") + "</span></div>" +
+          '<button type="button" class="btn-dark" data-h-start="' + esc(t.id) + '">10 brave minutes</button>' +
+          '<button type="button" class="btn-soft" data-h-del-task="' + esc(t.id) + '" aria-label="Remove ' + esc(t.name) + '">Remove</button></div>';
+      }).join("") +
+      '<button type="button" class="chip dashed" data-h-add-task>+ Add what I\'m avoiding</button></div></section>';
   }
 
   function passionCard(p) {
@@ -424,6 +480,50 @@
   }
 
   /* ------------------------------------------------------------------ */
+  /* Meditation bells — synthesised in the browser, so they work offline */
+  /* ------------------------------------------------------------------ */
+
+  const MED_TIMES = [5, 10, 15, 20, 30, 45, 60];
+  const MED_INTERVALS = [{ m: 0, label: "No interval bells" }, { m: 1, label: "Every 1 min" }, { m: 2, label: "Every 2 min" }, { m: 5, label: "Every 5 min" }, { m: 10, label: "Every 10 min" }];
+  const MED_SOUNDS = [{ id: "bowl", label: "Tibetan singing bowl" }, { id: "bell", label: "Small bell" }, { id: "deep", label: "Deep bowl" }];
+  let actx = null;
+  function audio() {
+    if (!actx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; actx = new AC(); }
+    if (actx.state === "suspended") actx.resume();
+    return actx;
+  }
+  function strike(kind, when) {
+    const ac = audio();
+    if (!ac) return;
+    const t0 = when || ac.currentTime + 0.05;
+    const v = { bowl: { f: 262, parts: [[1, 1, 9], [2.76, 0.45, 6], [5.4, 0.22, 4], [8.9, 0.1, 2.5]] },
+                deep: { f: 131, parts: [[1, 1, 12], [2.72, 0.5, 8], [5.2, 0.2, 5], [8.6, 0.08, 3]] },
+                bell: { f: 880, parts: [[1, 1, 4], [2.0, 0.5, 2.5], [3.01, 0.35, 1.8], [4.2, 0.2, 1.2], [5.43, 0.12, 0.9]] } }[kind] || null;
+    if (!v) return;
+    const master = ac.createGain();
+    master.gain.value = 0.32;
+    master.connect(ac.destination);
+    v.parts.forEach(([ratio, amp, decay]) => {
+      [0, 1.6].forEach((detune, k) => { // two slightly detuned partials make the bowl's gentle "beating"
+        const o = ac.createOscillator();
+        const g = ac.createGain();
+        o.type = "sine";
+        o.frequency.value = v.f * ratio + (k ? detune : 0);
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(amp * (k ? 0.5 : 1), t0 + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+        o.connect(g); g.connect(master);
+        o.start(t0); o.stop(t0 + decay + 0.1);
+      });
+    });
+  }
+  function ringBell(kind, times) {
+    const ac = audio();
+    if (!ac) return;
+    for (let i = 0; i < (times || 1); i++) strike(kind, ac.currentTime + 0.05 + i * 3.2);
+  }
+
+  /* ------------------------------------------------------------------ */
   /* Session flow: before → doing → after                                */
   /* ------------------------------------------------------------------ */
 
@@ -447,14 +547,25 @@
 
   function startCheckIn(passionId) {
     if (S.active) { openFlow(); renderDoing(); return; }
-    draft = { passion: passionId || "", reasons: [], thought: "", feelings: [], mood: 5, minutes: S.minutes };
+    draft = { passion: passionId || "", reasons: [], thought: "", feelings: [], mood: 5, minutes: S.minutes,
+      med: { minutes: S.medMinutes || 10, interval: S.medInterval != null ? S.medInterval : 5, sound: S.medSound || "bowl" } };
     openFlow();
     renderCheckIn();
+  }
+
+  function avoidHtml(d) {
+    const avoiding = d.reasons.includes("Avoiding something");
+    return '<div class="field avoid' + (avoiding ? " on" : "") + '"><span>' +
+      (avoiding ? "You said you're avoiding something. What is it? Let's do 10 minutes of it." : "Or face the thing I'm avoiding") + "</span>" +
+      '<div class="chip-row">' + tasks().map((t) =>
+        '<button type="button" class="chip" data-h-pick-passion="' + esc(t.id) + '" aria-pressed="' + (d.passion === t.id) + '">' + esc(t.name) + "</button>").join("") +
+      '<button type="button" class="chip dashed" data-h-add-task>+ Add what I\'m avoiding</button></div></div>';
   }
 
   function renderCheckIn() {
     const d = draft;
     const sug = suggestFor(d.reasons, "");
+    const avoidFirst = d.reasons.includes("Avoiding something");
     $("#flowInner").innerHTML =
       '<div class="flow-top"><span class="eyebrow">Before · 20 seconds</span>' +
       '<button type="button" class="icon-btn" data-h-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
@@ -464,13 +575,25 @@
       '<div class="field"><span>How do I feel right now?</span>' + chipGroup("feel", FEEL_BEFORE.concat(d.feelings.filter((f) => !FEEL_BEFORE.includes(f))), d.feelings, "pink") +
       '<button type="button" class="link-btn" data-h-own-feel>+ my own word</button></div>' +
       '<label class="vol">Mood <input type="range" id="hMood" min="1" max="10" value="' + d.mood + '"> <b id="hMoodVal">' + d.mood + "/10</b></label>" +
-      '<div class="field"><span>Instead, I\'ll do…</span>' +
+      (avoidFirst ? avoidHtml(d) : "") +
+      '<div class="field"><span>' + (avoidFirst ? "Or something I love" : "Instead, I\'ll do…") + "</span>" +
       (sug.some((x) => x.why) ? '<span class="muted small">When I felt like this before, these helped:</span>' : "") +
       '<div class="chip-row">' + sug.map((x) => '<button type="button" class="chip sage" data-h-pick-passion="' + esc(x.p.id) + '" aria-pressed="' + (d.passion === x.p.id) + '">' + esc(x.p.name) + (x.why ? " · " + esc(x.why) : "") + "</button>").join("") + "</div>" +
       '<label class="sr-only" for="hPassion">Passion</label><select id="hPassion" class="kind-select"><option value="">— choose a passion —</option>' +
-      passions().map((p) => '<option value="' + esc(p.id) + '"' + (d.passion === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>").join("") + "</select></div>" +
-      '<div class="chip-row" role="group" aria-label="Length">' + TIMES.map((t) => '<button type="button" class="chip" data-h-flow-min="' + t.m + '" aria-pressed="' + (d.minutes === t.m) + '">' + t.label + "</button>").join("") + "</div>" +
-      '<button type="button" class="btn-primary" data-h-begin>' + (d.passion ? "Start " + esc(passionById(d.passion).name) : "Start") + "</button>";
+      '<optgroup label="My passions">' + passions().map((p) => '<option value="' + esc(p.id) + '"' + (d.passion === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>").join("") + "</optgroup>" +
+      (tasks().length ? '<optgroup label="Things I\'m avoiding">' + tasks().map((p) => '<option value="' + esc(p.id) + '"' + (d.passion === p.id ? " selected" : "") + ">" + esc(p.name) + "</option>").join("") + "</optgroup>" : "") +
+      "</select>" +
+      '<button type="button" class="link-btn" data-h-add-activity>+ Another activity (saved to my passions)</button></div>' +
+      (avoidFirst ? "" : avoidHtml(d)) +
+      (d.passion === "meditation"
+        ? '<div class="med-set"><span class="eyebrow">Meditation timer</span>' +
+          '<div class="chip-row" role="group" aria-label="Meditation length">' + MED_TIMES.map((m) => '<button type="button" class="chip" data-h-med-min="' + m + '" aria-pressed="' + (d.med.minutes === m) + '">' + m + " min</button>").join("") + "</div>" +
+          '<div class="chip-row" role="group" aria-label="Interval bells">' + MED_INTERVALS.map((x) => '<button type="button" class="chip" data-h-med-int="' + x.m + '" aria-pressed="' + (d.med.interval === x.m) + '">' + x.label + "</button>").join("") + "</div>" +
+          '<div class="chip-row" role="group" aria-label="Bell sound">' + MED_SOUNDS.map((x) => '<button type="button" class="chip sage" data-h-med-sound="' + x.id + '" aria-pressed="' + (d.med.sound === x.id) + '">' + x.label + "</button>").join("") +
+          '<button type="button" class="link-btn" data-h-med-test>Listen</button></div>' +
+          '<span class="muted small">A bell at the start, ' + (d.med.interval ? "every " + d.med.interval + " min, " : "") + "and three at the end.</span></div>"
+        : '<div class="chip-row" role="group" aria-label="Length">' + TIMES.map((t) => '<button type="button" class="chip" data-h-flow-min="' + t.m + '" aria-pressed="' + (d.minutes === t.m) + '">' + t.label + "</button>").join("") + "</div>") +
+      '<button type="button" class="btn-primary" data-h-begin>' + (d.passion ? (passionById(d.passion).task ? "Start 10 brave minutes · " : "Start ") + esc(passionById(d.passion).name) : "Start") + "</button>";
     $("#hMood").addEventListener("input", function () { d.mood = Number(this.value); $("#hMoodVal").textContent = d.mood + "/10"; });
     $("#hThought").addEventListener("input", function () { d.thought = this.value; });
     $("#hPassion").addEventListener("change", function () { d.passion = this.value; renderCheckIn(); });
@@ -484,6 +607,12 @@
       reasons: d.reasons, thought: d.thought.trim(), before: { feelings: d.feelings, mood: d.mood },
       prompt: promptFor(passionById(d.passion)), parked: [], notes: "",
     };
+    if (d.passion === "meditation") {
+      S.active.planned = d.med.minutes;
+      S.active.med = { interval: d.med.interval, sound: d.med.sound, bells: 0, endRung: false };
+      S.medMinutes = d.med.minutes; S.medInterval = d.med.interval; S.medSound = d.med.sound;
+      ringBell(d.med.sound, 1);
+    }
     draft = null;
     save();
     renderDoing();
@@ -505,13 +634,17 @@
     const person = S.people.length ? S.people[S.reminderIndex % S.people.length] : null;
     const snd = window.CalmPlayer ? window.CalmPlayer.soundOptions() : [];
     const cur = window.CalmPlayer ? window.CalmPlayer.currentSound() : "";
-    const writing = ["morning-pages", "journaling", "spell", "talking", "curiosity", "fairytales"].includes(a.passion);
+    const writing = ["morning-pages", "journaling", "spell", "talking", "curiosity", "fairytales", "song"].includes(a.passion);
+    const med = a.med ? '<div class="med-set"><span class="eyebrow">Bells</span><span>' +
+      esc((MED_SOUNDS.find((x) => x.id === a.med.sound) || {}).label || "Bell") + " · start" + (a.med.interval ? " · every " + a.med.interval + " min" : "") + " · three at the end</span>" +
+      '<span class="muted small">Keep the screen on so the bells can ring.</span></div>' : "";
     $("#flowInner").innerHTML =
       '<div class="flow-top"><span class="eyebrow">Now · ' + esc(p.name) + '</span><span class="muted small">phone on do-not-disturb</span></div>' +
       '<div class="timer" role="timer" aria-live="off"><div class="ring" id="hRing"><b id="hClock">' + clock(elapsedMs(a)) + "</b>" +
       '<span id="hOf">' + (a.planned ? "of " + a.planned + " min" : "open-ended") + "</span></div></div>" +
       '<div class="flow-card"><span class="eyebrow">Today\'s tiny prompt</span><span class="flow-prompt" id="flowTitle">' + esc(a.prompt) + "</span>" +
       '<button type="button" class="link-btn" data-h-flow-prompt>Another idea</button></div>' +
+      med +
       (person ? '<div class="reminder"><div><span class="eyebrow">Remember · ' + esc(person.name) + "</span><b>" + esc(person.line) + "</b></div>" +
         '<button type="button" class="icon-btn" data-h-next-reminder aria-label="Next reminder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>' : "") +
       (snd.length > 1 ? '<div class="field"><span>Sound underneath</span><div class="chip-row">' +
@@ -538,6 +671,14 @@
     const ms = elapsedMs(a);
     c.textContent = clock(ms);
     const ring = $("#hRing");
+    if (a.med && !a.pausedAt) {
+      const total = a.planned * 60000;
+      if (a.med.interval) {
+        const k = Math.floor(ms / (a.med.interval * 60000));
+        if (k > a.med.bells) { a.med.bells = k; if (ms < total - 5000) ringBell(a.med.sound, 1); save(); }
+      }
+      if (ms >= total && !a.med.endRung) { a.med.endRung = true; save(); ringBell(a.med.sound, 3); }
+    }
     if (a.planned) {
       const pct = Math.min(1, ms / (a.planned * 60000));
       ring.style.setProperty("--pct", (pct * 360).toFixed(1) + "deg");
@@ -716,13 +857,12 @@
       const name = (prompt("Name of the passion") || "").trim();
       if (!name) return;
       const step = (prompt("A tiny first step for it (optional)") || "").trim();
-      S.customPassions.push({ id: "c-" + uid(), name: name.slice(0, 40), color: "#DCD3E6", custom: true, energy: ["make", "curious", "low", "restless"], prompts: step ? [step] : [] });
-      save(); renderPassions(); toast(name + " added"); return;
+      addPassion(name, step); renderPassions(); toast(name + " added"); return;
     }
     if (d.hDelPassion) {
       const p = passionById(d.hDelPassion);
       if (p && confirm("Remove “" + p.name + "”? Its past sessions stay in your journal.")) {
-        S.customPassions = S.customPassions.filter((x) => x.id !== p.id); save(); renderPassions();
+        S.customPassions = S.customPassions.filter((x) => x.id !== p.id); forget(p.id); save(); renderPassions();
       }
       return;
     }
@@ -740,7 +880,7 @@
     }
     if (d.hDelPerson) {
       const p = S.people.find((x) => x.id === d.hDelPerson);
-      if (p && confirm("Remove " + p.name + " from My people?")) { S.people = S.people.filter((x) => x !== p); save(); renderToday(); }
+      if (p && confirm("Remove " + p.name + " from My people?")) { S.people = S.people.filter((x) => x !== p); forget(p.id); save(); renderToday(); }
       return;
     }
     // flow
@@ -749,7 +889,31 @@
     if (d.hPickFeel) { toggle(draft.feelings, d.hPickFeel); renderCheckIn(); return; }
     if (d.hOwnFeel !== undefined) { const w = (prompt("Your word for how you feel") || "").trim(); if (w) { draft.feelings.push(w.slice(0, 24)); renderCheckIn(); } return; }
     if (d.hPickPassion) { draft.passion = d.hPickPassion; renderCheckIn(); return; }
+    if (d.hAddTask !== undefined) {
+      const id = addTask(prompt("What are you avoiding? (e.g. work, emails, the query letter, tidying)"));
+      if (!id) return;
+      if (draft) { draft.passion = id; if (!draft.minutes) draft.minutes = 20; renderCheckIn(); }
+      else renderPassions();
+      return;
+    }
+    if (d.hAddActivity !== undefined) {
+      const name = prompt("What would you like to do?");
+      if (!name || !name.trim()) return;
+      const step = (prompt("A tiny first step for it (optional)") || "").trim();
+      const id = addPassion(name, step);
+      if (id) { draft.passion = id; renderCheckIn(); toast(name.trim() + " added to your passions"); }
+      return;
+    }
+    if (d.hDelTask) {
+      const t = (S.tasks || []).find((x) => x.id === d.hDelTask);
+      if (t && confirm("Remove “" + t.name + "”? Past sessions stay in your journal.")) { S.tasks = S.tasks.filter((x) => x !== t); forget(t.id); save(); renderPassions(); }
+      return;
+    }
     if (d.hFlowMin !== undefined) { draft.minutes = Number(d.hFlowMin); renderCheckIn(); return; }
+    if (d.hMedMin) { draft.med.minutes = Number(d.hMedMin); renderCheckIn(); return; }
+    if (d.hMedInt !== undefined) { draft.med.interval = Number(d.hMedInt); renderCheckIn(); return; }
+    if (d.hMedSound) { draft.med.sound = d.hMedSound; ringBell(d.hMedSound, 1); renderCheckIn(); return; }
+    if (d.hMedTest !== undefined) { ringBell(draft.med.sound, 1); return; }
     if (d.hBegin !== undefined) { begin(); return; }
     if (d.hFlowPrompt !== undefined) {
       const p = passionById(S.active.passion);
@@ -776,7 +940,7 @@
     // journal
     if (d.hRange) { S.journalRange = d.hRange; save(); renderJournal(); return; }
     if (d.hDelSession) {
-      if (confirm("Delete this session from your journal?")) { S.sessions = S.sessions.filter((s) => s.id !== d.hDelSession); save(); renderJournal(); }
+      if (confirm("Delete this session from your journal?")) { S.sessions = S.sessions.filter((s) => s.id !== d.hDelSession); forget(d.hDelSession); save(); renderJournal(); }
       return;
     }
     if (d.hExport !== undefined) {
@@ -792,7 +956,7 @@
     if (d.hSpellTag !== undefined) { S.spellTag = d.hSpellTag; save(); renderSpells(); return; }
     if (d.hNewSpell !== undefined) { $("#spellForm").hidden = false; $("#spTitle").focus(); return; }
     if (d.hCancelSpell !== undefined) { $("#spellForm").hidden = true; return; }
-    if (d.hDelSpell) { if (confirm("Remove this spell?")) { S.spells = S.spells.filter((s) => s.id !== d.hDelSpell); save(); renderSpells(); } return; }
+    if (d.hDelSpell) { if (confirm("Remove this spell?")) { S.spells = S.spells.filter((s) => s.id !== d.hDelSpell); forget(d.hDelSpell); save(); renderSpells(); } return; }
   });
 
   function toggle(arr, v) { const i = arr.indexOf(v); if (i === -1) arr.push(v); else arr.splice(i, 1); }
