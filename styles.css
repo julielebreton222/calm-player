@@ -1291,3 +1291,8 @@ button.row { border-left: 0; border-right: 0; border-top: 0; font: inherit; curs
 @media (prefers-reduced-motion: reduce) {
   .pr-circle { transition: none !important; }
 }
+
+/* breath cue sounds */
+.cue-box { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; background: #fff; }
+.cue-top { display: flex; align-items: center; gap: 12px; }
+.cue-box .chip { font-size: 14px; }

@@ -962,6 +962,56 @@
   ];
   function pranaById(id) { return PRANAYAMAS.find((x) => x.id === id) || null; }
 
+  const CUE_SOUNDS = [
+    { id: "bowl", label: "Tiny bowl" }, { id: "wood", label: "Wood block" },
+    { id: "chime", label: "Soft chime" }, { id: "tick", label: "Soft tick" },
+  ];
+  function cueSettings() { return Object.assign({ on: true, sound: "bowl", vol: 0.6 }, S.breathCue || {}); }
+  // in = higher note, hold = soft middle, out = lower note — so you can tell them apart with eyes closed
+  function cue(phase, force) {
+    const c = cueSettings();
+    if (!c.on && !force) return;
+    const ac = audio();
+    if (!ac) return;
+    const t0 = ac.currentTime + 0.02;
+    const mult = phase === "in" ? 1 : phase === "out" ? 0.75 : 0.87;
+    const vol = (phase === "hold" ? 0.55 : 1) * (c.vol == null ? 0.6 : c.vol);
+    const out = ac.createGain();
+    out.gain.value = vol * 0.5;
+    out.connect(ac.destination);
+    const tone = (freq, amp, decay, type) => {
+      const o = ac.createOscillator(); const g = ac.createGain();
+      o.type = type || "sine"; o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(amp, t0 + 0.006);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + decay);
+      o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + decay + 0.05);
+    };
+    if (c.sound === "bowl") { const f = 784 * mult; tone(f, 0.9, 2.2); tone(f * 2.72, 0.35, 1.2); tone(f + 2, 0.4, 2.0); }
+    else if (c.sound === "chime") { const f = 1318 * mult; tone(f, 0.8, 1.4); tone(f * 2, 0.25, 0.8); }
+    else if (c.sound === "tick") { tone(1900 * mult, 0.6, 0.05, "triangle"); }
+    else { // wood block: short knock with a hollow overtone, plus a tiny burst of filtered noise
+      const f = 880 * mult; tone(f, 0.9, 0.12, "triangle"); tone(f * 2.4, 0.4, 0.06);
+      const len = Math.floor(ac.sampleRate * 0.03), buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+      const n = ac.createBufferSource(); n.buffer = buf;
+      const bp = ac.createBiquadFilter(); bp.type = "bandpass"; bp.frequency.value = 1500 * mult; bp.Q.value = 3;
+      const ng = ac.createGain(); ng.gain.value = 0.5;
+      n.connect(bp); bp.connect(ng); ng.connect(out); n.start(t0);
+    }
+  }
+  function cueControls() {
+    const c = cueSettings();
+    return '<div class="cue-box"><div class="cue-top"><span class="row-main"><b>Sound when the breath changes</b><span>higher = in · soft = hold · lower = out</span></span>' +
+      '<button type="button" class="toggle' + (c.on ? " on" : "") + '" data-h-cue-toggle aria-pressed="' + c.on + '">' + (c.on ? "On" : "Off") + "</button></div>" +
+      (c.on ? '<div class="chip-row">' + CUE_SOUNDS.map((x) => '<button type="button" class="chip" data-h-cue-sound="' + x.id + '" aria-pressed="' + (c.sound === x.id) + '">' + x.label + "</button>").join("") + "</div>" +
+        '<label class="vol">Volume <input type="range" id="cueVol" min="5" max="100" value="' + Math.round((c.vol == null ? 0.6 : c.vol) * 100) + '"></label>' : "") + "</div>";
+  }
+  function bindCueVol() {
+    const v = $("#cueVol");
+    if (v) v.addEventListener("change", function () { S.breathCue = Object.assign(cueSettings(), { vol: Number(this.value) / 100 }); save(); cue("in", true); });
+  }
+
   let breathEngine = null;
   function stopBreathEngine() { if (breathEngine) { clearTimeout(breathEngine.t); breathEngine = null; } }
 
@@ -1022,10 +1072,12 @@
       '<div class="stepper small"><button type="button" class="round-btn" data-h-bround="-1" aria-label="Fewer rounds">−</button>' +
       '<span><b class="rounds-num">' + rounds + "</b> rounds</span>" +
       '<button type="button" class="round-btn" data-h-bround="1" aria-label="More rounds">+</button></div>' +
+      cueControls() +
       '<button type="button" class="btn-primary" data-h-bbegin="' + x.id + '">Begin</button>' +
       (suggested ? '<button type="button" class="link-btn center" data-h-bsuggest>Suggest another</button>' : "") +
       readMore(x);
     $("#flowInner").dataset.breath = x.id;
+    bindCueVol();
   }
 
   function beginPranayama(id) {
@@ -1054,8 +1106,9 @@
       '<div class="flow-top"><span class="eyebrow">' + esc(x.name) + '</span><span class="muted small" id="bRound"></span></div>' +
       '<div class="pr-stage"><div class="pr-circle" id="bCircle"></div><div class="pr-text"><b id="bSay"></b><span id="bCount"></span></div></div>' +
       '<div class="flow-btns"><button type="button" class="btn-ghost-dark" data-h-bpause>Pause</button>' +
-      '<button type="button" class="btn-primary" data-h-bfinish>Finish</button></div>';
-    ringBell("bell", 1);
+      '<button type="button" class="btn-primary" data-h-bfinish>Finish</button></div>' +
+      '<button type="button" class="link-btn center" data-h-cue-toggle id="cueRunToggle">' + (cueSettings().on ? "Sound cues on — tap to mute" : "Sound cues off — tap to turn on") + "</button>";
+    if (!cueSettings().on) ringBell("bell", 1);
     runPhase();
   }
 
@@ -1088,6 +1141,9 @@
       tickDown();
     }
     c.dataset.k = ph.k;
+    if (ph.k === "in" || ph.k === "out" || ph.k === "hold") cue(ph.k);
+    else if (ph.k === "rest") cue("out");
+    else if (ph.k === "pump" && ph.n === 1) cue("in");
     e.t = setTimeout(() => { e.i++; runPhase(); }, ph.s * 1000);
   }
 
@@ -1640,6 +1696,20 @@
       return;
     }
     if (d.hBbegin) { beginPranayama(d.hBbegin); return; }
+    if (d.hCueToggle !== undefined) {
+      S.breathCue = Object.assign(cueSettings(), { on: !cueSettings().on }); save();
+      if (cueSettings().on) cue("in", true);
+      if (b.id === "cueRunToggle") { b.textContent = cueSettings().on ? "Sound cues on — tap to mute" : "Sound cues off — tap to turn on"; return; }
+      const id = $("#flowInner").dataset.breath; const box = $(".cue-box");
+      if (box) { box.outerHTML = cueControls(); bindCueVol(); }
+      return;
+    }
+    if (d.hCueSound) {
+      S.breathCue = Object.assign(cueSettings(), { sound: d.hCueSound }); save();
+      cue("in", true); setTimeout(() => cue("out", true), 700);
+      const box = $(".cue-box"); if (box) { box.outerHTML = cueControls(); bindCueVol(); }
+      return;
+    }
     if (d.hBpause !== undefined) {
       const e2 = breathEngine;
       if (!e2) return;
