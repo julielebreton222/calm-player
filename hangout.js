@@ -569,12 +569,9 @@
         '<span class="muted small">Shown during every session, one at a time</span></div>' + peopleHtml() + "</section>";
       return;
     }
-    const len = S.playLen || "2";
-    const lens = [["2", "2 min"], ["15", "15 min"], ["long", "Longer"]];
+    const all = passions().concat(inMix().map(ideaAsPassion));
     el.innerHTML = '<section class="block calm-page"><h1 class="page-title">Play</h1>' +
-      '<div class="seg" role="group" aria-label="How much time do I have">' + lens.map(([k, l]) =>
-        '<button type="button" class="seg-btn' + (len === k ? " active" : "") + '" data-h-len="' + k + '" aria-pressed="' + (len === k) + '">' + l + "</button>").join("") + "</div>" +
-      '<div class="rows">' + playList(len).map((p) =>
+      '<div class="rows">' + all.map((p) =>
         '<button type="button" class="row row-btn" data-h-play-row="' + esc(p.id) + '">' +
         '<span class="row-dot" style="background:' + (p.idea ? "#9CC28E" : p.dark ? "#B83A72" : p.color) + '"></span>' +
         '<span class="row-main"><b>' + esc(p.name) + "</b><span>" + esc(p.idea ? "From your compost" : promptFor(p)) + "</span></span>" + CHEV + "</button>").join("") + "</div>" +
@@ -1657,8 +1654,8 @@
     if (d.hLen) { S.playLen = d.hLen; save(); renderPassions(); return; }
     if (d.hPlayView) { S.playView = d.hPlayView; save(); renderPassions(); window.scrollTo({ top: 0 }); return; }
     if (d.hPlayRow) {
-      const len = S.playLen || "2";
-      quickStart(d.hPlayRow, len === "2" ? 2 : len === "15" ? 15 : 0);
+      if (d.hPlayRow === "meditation") { location.hash = "#/meditate"; return; }
+      quickStart(d.hPlayRow, 0);
       return;
     }
     if (d.hMpStep) {
