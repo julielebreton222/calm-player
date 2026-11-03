@@ -1589,6 +1589,31 @@
       else startSound(id);
     },
     currentSound: function () { return state.sound || ""; },
+    soundTitle: function () { return state.sound ? soundTitle(state.sound) : ""; },
+    soundKind: function () { return isListPlaying() ? "Background videos" : isLocalPlaying() ? "My files · offline" : state.sound ? "Soundscape" : ""; },
+    setVolume: function (v) {
+      state.soundVol = v;
+      $("#soundVol").value = v; $("#bgVol").value = v;
+      if (soundPlayer && typeof soundPlayer.setVolume === "function") soundPlayer.setVolume(v);
+      localAudio.volume = v / 100;
+      save();
+    },
+    volume: function () { return state.soundVol; },
+    currentVideo: function () {
+      const v = videoById(state.current);
+      if (!v) return null;
+      const pl = currentPlaylist();
+      const pos = pl ? pl.items.indexOf(v.id) : -1;
+      return { id: v.id, title: v.title, channel: v.channel, section: v.section, min: v.min,
+        where: pos > -1 ? pl.name + ", " + (pos + 1) + " of " + pl.items.length : v.channel };
+    },
+    play: function (id) { select(id, { play: true, scroll: true }); },
+    counts: function () {
+      const c = {};
+      allVideos().forEach((v) => { c[v.section] = (c[v.section] || 0) + 1; });
+      c.lists = state.playlists.length;
+      return c;
+    },
     stopSound: stopSound,
   };
   loadLocalFiles().then(() => { renderShelf(); renderSoundChips(); });

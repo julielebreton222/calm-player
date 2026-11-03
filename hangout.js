@@ -17,11 +17,18 @@
   // energy: which moods each passion suits — low, restless, curious, make
   const PASSIONS = [
     { id: "drawing", name: "Drawing", color: "#E9B8A0", energy: ["restless", "make"], prompts: [
-      "Draw the cup or plant closest to you. 10 minutes, pencil only.",
-      "Draw your own hand, three times, each faster than the last.",
-      "Fill a page with tiny drawings of things in this room.",
-      "Draw a fairytale door and what might be behind it.",
-      "Draw with your other hand. Let it be wobbly.",
+      "Draw your teacup slowly growing roots and leaves.",
+      { t: "Look up Remedios Varo's “Creation of the Birds” and copy one small corner of it in pencil.", look: "Remedios Varo Creation of the Birds" },
+      "Draw a staircase that leads into a cloud. Who lives at the top?",
+      { t: "Look up Leonora Carrington's “Self-Portrait (The Inn of the Dawn Horse)” and borrow its hyena, horse or chair for a drawing of your own.", look: "Leonora Carrington Self-Portrait Inn of the Dawn Horse" },
+      "Draw your hand as a tiny house — windows, a door, a chimney.",
+      { t: "Look up Remedios Varo's “Embroidering the Earth's Mantle”. Copy the tower, then draw your own room inside it.", look: "Remedios Varo Embroidering the Earth's Mantle" },
+      "Draw an animal wearing your clothes, sitting at your table.",
+      { t: "Look up Leonora Carrington's “The Giantess” and draw your own giantess holding something small and precious.", look: "Leonora Carrington The Giantess" },
+      "Draw the moon, come indoors to rest on your bed.",
+      "Draw a creature that is half plant, half you.",
+      { t: "Look up a Remedios Varo painting you haven't seen. Copy one figure, then give it a new job.", look: "Remedios Varo paintings" },
+      "Draw a door in the middle of a field. What's leaking out from under it?",
     ] },
     { id: "music", name: "Listening to music", color: "#B9C7E8", energy: ["low", "restless"], prompts: [
       "One full album, start to finish, lying down.",
@@ -256,11 +263,12 @@
     save();
     return p.id;
   }
-  function promptFor(p) {
+  function promptItem(p) {
     const list = p.prompts && p.prompts.length ? p.prompts : ["Do it for 15 minutes, just for the joy of it."];
-    const i = (S.promptIndex[p.id] || 0) % list.length;
-    return list[i];
+    return list[(S.promptIndex[p.id] || 0) % list.length];
   }
+  function promptFor(p) { const x = promptItem(p); return typeof x === "string" ? x : x.t; }
+  function lookFor(p) { const x = promptItem(p); return typeof x === "string" ? "" : (x.look || ""); }
   function nextPrompt(id) { S.promptIndex[id] = (S.promptIndex[id] || 0) + 1; save(); }
 
   /* ------------------------------------------------------------------ */
@@ -320,12 +328,14 @@
   /* Tabs & routing                                                      */
   /* ------------------------------------------------------------------ */
 
-  const TABS = ["today", "passions", "compost", "meditate", "move", "sounds", "journal", "spells"];
+  const TABS = ["today", "passions", "meditate", "spells", "move", "sounds", "keep"];
+  const NAV_OF = { meditate: "passions", spells: "passions" };
   function showTab(id, scrollTarget) {
+    if (id === "compost" || id === "journal") { S.keepView = id; id = "keep"; }
     if (!TABS.includes(id)) id = "today";
     TABS.forEach((t) => { const el = $("#tab-" + t); if (el) el.hidden = t !== id; });
     $$("#tabs a").forEach((a) => {
-      const on = a.dataset.tab === id;
+      const on = a.dataset.tab === (NAV_OF[id] || id);
       a.classList.toggle("active", on);
       if (on) a.setAttribute("aria-current", "page"); else a.removeAttribute("aria-current");
     });
@@ -340,19 +350,24 @@
     if (h.length > 1) {
       const el = document.getElementById(h.slice(1));
       const tab = el && el.closest(".tab");
-      if (tab) { showTab(tab.id.replace("tab-", ""), el); return; }
+      if (tab) {
+        const t = tab.id.replace("tab-", "");
+        if (t === "move" && MOVE_SECTIONS.includes(el.id)) S.moveView = el.id;
+        if (t === "sounds" && LISTEN_SECTIONS.includes(el.id)) S.listenView = el.id;
+        showTab(t, el);
+        return;
+      }
     }
     showTab("today");
   }
   function renderTab(id) {
     document.body.classList.toggle("gentle", !!S.gentle);
     if (id === "today") renderToday();
-    if (id === "compost") renderCompost();
+    if (id === "keep") renderKeep();
     if (id === "meditate") renderMeditate();
-    if (id === "move") renderYoga();
+    if (id === "move") renderMoveTop();
     if (id === "sounds") renderSoundsExtras();
     if (id === "passions") renderPassions();
-    if (id === "journal") renderJournal();
     if (id === "spells") renderSpells();
   }
 
@@ -460,7 +475,7 @@
       '<section class="home">' +
       (S.active ? '<button type="button" class="resume-pill" data-h-resume>Back to my ' + esc((passionById(S.active.passion) || {}).name || "session") + "</button>" : "") +
       '<div class="breath" aria-hidden="true"><div class="breath-glow"></div><div class="breath-flower">' + mascot(150, "sleepy") + "</div></div>" +
-      '<p class="breath-words" aria-live="off"><span class="in">breathe in</span><span class="out">breathe out</span></p>' +
+      '<p class="breath-words" aria-live="off"><span class="w1">breathe in</span><span class="w2">hold</span><span class="w3">breathe out</span><span class="w4">hold</span></p>' +
       '<figure class="home-quote"><blockquote>“' + esc(q.q) + "”</blockquote><figcaption>— " + esc(q.by) + "</figcaption>" +
       '<button type="button" class="link-btn" data-h-quote>another</button></figure>' +
       '<p class="home-remind">Remember to play.</p>' +
@@ -513,30 +528,60 @@
     return { mins: w.reduce((n, s) => n + (s.minutes || 0), 0), n: w.length };
   }
 
+  const LONG = ["nature", "music", "curiosity", "fairytales", "drawing", "yoga-learning", "morning-pages", "song"];
+  const CHEV = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+  const BACK = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+  function backRow(label, attr) {
+    return '<button type="button" class="back-row" ' + attr + '>' + BACK + "<span>" + esc(label) + "</span></button>";
+  }
+  function playList(len) {
+    const ps = passions().filter((p) => p.id !== "meditation");
+    let list;
+    if (len === "2") list = ps.filter((p) => TINY.includes(p.id));
+    else if (len === "long") list = ps.filter((p) => LONG.includes(p.id) || p.custom);
+    else list = ps.filter((p) => !TINY.includes(p.id));
+    return list.concat(inMix().map(ideaAsPassion));
+  }
   function renderPassions() {
     const el = $("#tab-passions");
-    el.innerHTML =
-      '<section class="block"><div class="block-head"><h1 class="page-title">Things I love</h1>' +
-      '<span class="muted small">No need to feel like it first. “Just 2 min” skips the questions — you can always stop.</span></div>' +
-      '<div class="chip-row" role="group" aria-label="Session length"><span class="muted small">How long?</span>' +
-      TIMES.map((t) => '<button type="button" class="chip" data-h-minutes="' + t.m + '" aria-pressed="' + (S.minutes === t.m) + '">' + t.label + "</button>").join("") + "</div>" +
-      '<h2 class="sub-h">Tiny things · 2–5 minutes</h2>' +
-      '<div class="grid passions">' + passions().filter((p) => TINY.includes(p.id)).map(passionCard).join("") + "</div>" +
-      '<h2 class="sub-h">Cozy things · when I have a little more time</h2>' +
-      '<div class="grid passions">' + passions().filter((p) => !TINY.includes(p.id)).map(passionCard).join("") +
-      '<button type="button" class="passion add" data-h-add-passion>+ Add a passion</button></div></section>' +
-      '<section class="block avoid-block"><div class="block-head"><h2>Things I tend to avoid</h2>' +
-      '<span class="muted small">When scrolling is really avoiding, do 10 brave minutes of one of these</span></div>' +
-      '<div class="avoid-list">' + tasks().map((t) => {
-        const st = passionStats(t.id);
-        return '<div class="avoid-row"><div><b>' + esc(t.name) + '</b><span class="muted small">' +
-          (st.n ? fmtMin(st.mins) + " this week" : "Not yet this week") + "</span></div>" +
-          '<button type="button" class="btn-dark" data-h-start="' + esc(t.id) + '">10 brave minutes</button>' +
-          '<button type="button" class="btn-soft" data-h-del-task="' + esc(t.id) + '" aria-label="Remove ' + esc(t.name) + '">Remove</button></div>';
-      }).join("") +
-      '<button type="button" class="chip dashed" data-h-add-task>+ Add what I\'m avoiding</button></div></section>' +
-      '<section class="block" id="people"><div class="block-head"><h2>My people · what I remember from them</h2>' +
-      '<span class="muted small">Shown during every session, one at a time</span></div>' + peopleHtml() + "</section>";
+    const view = S.playView || "list";
+    if (view === "avoid") {
+      el.innerHTML = '<section class="block calm-page">' + backRow("Play", "data-h-play-view=\"list\"") +
+        '<h1 class="page-title">Things I avoid</h1><p class="muted">When scrolling is really avoiding, do 10 brave minutes of one of these.</p>' +
+        '<div class="rows">' + tasks().map((t) => {
+          const st = passionStats(t.id);
+          return '<div class="row"><span class="row-dot" style="background:#D9BFC5"></span><span class="row-main"><b>' + esc(t.name) + "</b><span>" +
+            (st.n ? fmtMin(st.mins) + " this week" : "not yet this week") + "</span></span>" +
+            '<button type="button" class="btn-soft" data-h-start="' + esc(t.id) + '">10 min</button>' +
+            '<button type="button" class="icon-btn small" data-h-del-task="' + esc(t.id) + '" aria-label="Remove ' + esc(t.name) + '"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>';
+        }).join("") + "</div>" +
+        '<button type="button" class="wide-btn" data-h-add-task>+ Add what I\'m avoiding</button></section>';
+      return;
+    }
+    if (view === "edit") {
+      el.innerHTML = '<section class="block">' + backRow("Play", "data-h-play-view=\"list\"") +
+        '<h1 class="page-title">My list</h1><p class="muted">Every activity, with its tiny prompts. Add your own, or remove ones you added.</p>' +
+        '<div class="grid passions">' + passions().map(passionCard).join("") +
+        '<button type="button" class="passion add" data-h-add-passion>+ Add a passion</button></div></section>' +
+        '<section class="block" id="people"><div class="block-head"><h2>My people · what I remember from them</h2>' +
+        '<span class="muted small">Shown during every session, one at a time</span></div>' + peopleHtml() + "</section>";
+      return;
+    }
+    const len = S.playLen || "2";
+    const lens = [["2", "2 min"], ["15", "15 min"], ["long", "Longer"]];
+    el.innerHTML = '<section class="block calm-page"><h1 class="page-title">Play</h1>' +
+      '<div class="seg" role="group" aria-label="How much time do I have">' + lens.map(([k, l]) =>
+        '<button type="button" class="seg-btn' + (len === k ? " active" : "") + '" data-h-len="' + k + '" aria-pressed="' + (len === k) + '">' + l + "</button>").join("") + "</div>" +
+      '<div class="rows">' + playList(len).map((p) =>
+        '<button type="button" class="row row-btn" data-h-play-row="' + esc(p.id) + '">' +
+        '<span class="row-dot" style="background:' + (p.idea ? "#9CC28E" : p.dark ? "#B83A72" : p.color) + '"></span>' +
+        '<span class="row-main"><b>' + esc(p.name) + "</b><span>" + esc(p.idea ? "From your compost" : promptFor(p)) + "</span></span>" + CHEV + "</button>").join("") + "</div>" +
+      '<div class="pill-grid">' +
+      '<a class="pill-link" href="#/meditate">Meditate</a>' +
+      '<a class="pill-link" href="#/spells">Spell book</a>' +
+      '<button type="button" class="pill-link" data-h-play-view="avoid">Things I avoid</button>' +
+      '<button type="button" class="pill-link" data-h-play-view="edit">Edit my list</button>' +
+      "</div></section>";
   }
 
   function passionCard(p) {
@@ -694,7 +739,7 @@
     S.active = {
       id: uid(), passion: d.passion, start: Date.now(), planned: d.minutes, pausedMs: 0, pausedAt: null,
       reasons: d.reasons, thought: d.thought.trim(), before: { feelings: d.feelings, mood: d.skipped ? null : d.mood },
-      prompt: promptFor(passionById(d.passion)), parked: [], notes: "",
+      prompt: promptFor(passionById(d.passion)), look: lookFor(passionById(d.passion)), parked: [], notes: "",
     };
     if (d.passion === "meditation") {
       S.active.planned = d.med.minutes;
@@ -732,6 +777,7 @@
       '<div class="timer" role="timer" aria-live="off"><div class="ring" id="hRing"><b id="hClock">' + clock(elapsedMs(a)) + "</b>" +
       '<span id="hOf">' + (a.planned ? "of " + a.planned + " min" : "open-ended") + "</span></div></div>" +
       '<div class="flow-card"><span class="eyebrow">Today\'s tiny prompt</span><span class="flow-prompt" id="flowTitle">' + esc(a.prompt) + "</span>" +
+      (a.look ? '<a class="look-link" href="https://www.google.com/search?tbm=isch&amp;q=' + encodeURIComponent(a.look) + '" target="_blank" rel="noopener">Look it up</a>' : "") +
       '<button type="button" class="link-btn" data-h-flow-prompt>Another idea</button></div>' +
       med +
       (person ? '<div class="reminder"><div><span class="eyebrow">Remember · ' + esc(person.name) + "</span><b>" + esc(person.line) + "</b></div>" +
@@ -834,8 +880,9 @@
     if (!p) return;
     S.active = {
       id: uid(), passion: pid, start: Date.now(), planned: minutes, pausedMs: 0, pausedAt: null,
-      reasons: [], thought: "", before: { feelings: [], mood: null }, prompt: promptFor(p), parked: [], notes: "",
+      reasons: [], thought: "", before: { feelings: [], mood: null }, prompt: promptFor(p), look: lookFor(p), parked: [], notes: "",
     };
+    nextPrompt(p.id); // a different idea next time
     if (med) {
       S.active.med = { interval: med.interval, sound: med.sound, bells: 0, endRung: false };
       ringBell(med.sound, 1);
@@ -883,22 +930,22 @@
   /* ---------- Meditate tab ---------- */
   function renderMeditate() {
     const el = $("#tab-meditate");
-    const m = { minutes: S.medMinutes || 10, interval: S.medInterval != null ? S.medInterval : 5, sound: S.medSound || "bowl" };
-    const done = S.sessions.filter((x) => x.passion === "meditation");
-    const total = done.reduce((n, x) => n + (x.minutes || 0), 0);
-    el.innerHTML =
-      '<section class="block med-page"><div class="med-head">' + mascot(96, "sleepy") +
-      '<div><h1 class="page-title">Meditate</h1><span class="muted">Sit, breathe, let the bowl keep time for you.</span></div></div>' +
-      '<div class="med-set big"><span class="eyebrow">How long</span><div class="chip-row">' +
-      MED_TIMES.map((x) => '<button type="button" class="chip" data-h-mp-min="' + x + '" aria-pressed="' + (m.minutes === x) + '">' + x + " min</button>").join("") + "</div>" +
-      '<span class="eyebrow">Bells in between</span><div class="chip-row">' +
-      MED_INTERVALS.map((x) => '<button type="button" class="chip" data-h-mp-int="' + x.m + '" aria-pressed="' + (m.interval === x.m) + '">' + x.label + "</button>").join("") + "</div>" +
-      '<span class="eyebrow">Sound</span><div class="chip-row">' +
-      MED_SOUNDS.map((x) => '<button type="button" class="chip sage" data-h-mp-sound="' + x.id + '" aria-pressed="' + (m.sound === x.id) + '">' + x.label + "</button>").join("") +
-      '<button type="button" class="link-btn" data-h-mp-test>Listen</button></div>' +
-      '<span class="muted small">One bell to begin' + (m.interval ? ", one every " + m.interval + " min" : "") + ", three to end. Keep the screen on so the bells can ring.</span></div>" +
-      '<button type="button" class="btn-primary big-begin" data-h-mp-begin>Begin ' + m.minutes + " minutes</button>" +
-      '<p class="muted small soft-count">' + (done.length ? done.length + (done.length === 1 ? " sit" : " sits") + " · " + fmtMin(total) + " in stillness so far" : "Your first sit will be remembered here.") + "</p>" +
+    const mins = S.medMinutes || 10;
+    const iv = S.medInterval != null ? S.medInterval : 5;
+    const snd = S.medSound || "bowl";
+    const ivLabel = (MED_INTERVALS.find((x) => x.m === iv) || MED_INTERVALS[0]).label.replace("No interval bells", "none").replace("Every", "every");
+    const sndLabel = (MED_SOUNDS.find((x) => x.id === snd) || MED_SOUNDS[0]).label.toLowerCase();
+    el.innerHTML = '<section class="block calm-page med-calm">' +
+      '<div class="title-row"><a class="round-btn" href="#/passions" aria-label="Back to Play">' + BACK + '</a><h1 class="page-title">Meditate</h1></div>' +
+      '<div class="stepper"><button type="button" class="round-btn big" data-h-mp-step="-1" aria-label="Less time">−</button>' +
+      '<span class="big-num" aria-live="polite">' + mins + '</span><button type="button" class="round-btn big" data-h-mp-step="1" aria-label="More time">+</button></div>' +
+      '<span class="muted center">minutes</span>' +
+      '<div class="rows settings">' +
+      '<button type="button" class="row row-btn" data-h-mp-bells><span class="row-main"><b>Bells in between</b></span><span class="row-val">' + esc(ivLabel) + "</span>" + CHEV + "</button>" +
+      '<button type="button" class="row row-btn" data-h-mp-snd><span class="row-main"><b>Sound</b></span><span class="row-val">' + esc(sndLabel) + "</span>" + CHEV + "</button>" +
+      "</div>" +
+      '<button type="button" class="btn-primary big-begin" data-h-mp-begin>Begin</button>' +
+      '<p class="muted small center">One bell to begin, three to end. Keep the screen on so the bells can ring.</p>' +
       "</section>";
   }
 
@@ -912,25 +959,40 @@
     renderYoga();
     return true;
   }
-  function renderYoga() {
+  const MOVE_SECTIONS = ["yoga", "move", "flex", "pilates", "dance", "lists", "kept"];
+  const MOVE_LABELS = { yoga: "Yoga", move: "Calisthenics", flex: "Flexibility", pilates: "Pilates", dance: "Dance", lists: "My playlists & kept" };
+  function renderYoga() { renderMoveTop(); }
+  function renderMoveTop() {
     const el = $("#yogaCounter");
-    if (!el) return;
+    const tab = $("#tab-move");
+    if (!el || !tab) return;
+    const view = MOVE_SECTIONS.includes(S.moveView) ? S.moveView : "";
+    tab.dataset.view = view || "summary";
+    if (view) {
+      el.innerHTML = '<div class="move-cat-head">' + backRow("Move", "data-h-move-view=\"\"") +
+        '<div class="title-row spread"><h1 class="page-title">' + esc(MOVE_LABELS[view] || "Move") + "</h1>" +
+        '<button type="button" class="btn-soft" data-h-open-add>+ Add a video</button></div></div>';
+      return;
+    }
+    const cp = window.CalmPlayer;
+    const cur = cp && cp.currentVideo ? cp.currentVideo() : null;
+    const counts = cp && cp.counts ? cp.counts() : {};
     const all = S.yoga || [];
-    const week = all.filter((y) => y.t >= rangeStart("week")).length;
-    const month = all.filter((y) => y.t >= rangeStart("month")).length;
     const dots = Array.from({ length: 7 }, (_, i) => {
       const d0 = rangeStart("week") + i * 864e5;
       const on = all.some((y) => y.t >= d0 && y.t < d0 + 864e5);
-      return '<span class="ydot' + (on ? " on" : "") + '" title="' + new Date(d0).toLocaleDateString(undefined, { weekday: "long" }) + '"></span>';
+      return '<span class="ydot' + (on ? " on" : "") + (i === 6 ? " today" : "") + '" title="' + new Date(d0).toLocaleDateString(undefined, { weekday: "long" }) + '"></span>';
     }).join("");
-    el.innerHTML =
-      '<div class="yoga-card"><div class="yoga-left">' + mascot(64, "awake") +
-      '<div><span class="eyebrow">Yoga counter</span><b class="yoga-big">' + all.length + (all.length === 1 ? " practice" : " practices") + "</b>" +
-      '<span class="muted small">' + week + " this week · " + month + " this month</span>" +
-      '<div class="ydots" aria-label="Days with yoga this week">' + dots + "</div></div></div>" +
-      '<div class="yoga-btns"><button type="button" class="btn-dark" data-h-yoga-plus>+1 I did yoga</button>' +
-      (all.length ? '<button type="button" class="link-btn" data-h-yoga-undo>Undo last</button>' : "") + "</div>" +
-      '<span class="muted small yoga-note">Yoga classes you play here count by themselves (once per class per day).</span></div>';
+    const week = all.filter((y) => y.t >= rangeStart("week")).length;
+    el.innerHTML = '<section class="block calm-page"><h1 class="page-title">Move</h1>' +
+      (cur ? '<button type="button" class="continue" data-h-continue="' + esc(cur.id) + '" data-sec="' + esc(cur.section) + '">' +
+        '<img src="https://i.ytimg.com/vi/' + esc(cur.id) + '/mqdefault.jpg" alt="" loading="lazy">' +
+        '<span class="row-main"><span>Continue · ' + esc(cur.where || "") + "</span><b>" + esc(cur.title) + "</b></span></button>" : "") +
+      '<div class="yoga-line"><div><b>Yoga this week</b><div class="ydots" role="img" aria-label="Yoga on ' + week + ' of the last 7 days">' + dots + "</div></div>" +
+      '<button type="button" class="btn-soft" data-h-yoga-plus aria-label="I did yoga today">+1</button></div>' +
+      '<div class="rows">' + ["yoga", "move", "flex", "pilates", "dance", "lists"].map((k) =>
+        '<button type="button" class="row row-btn" data-h-move-view="' + k + '"><span class="row-main"><b>' + esc(MOVE_LABELS[k]) + "</b></span>" +
+        '<span class="row-val">' + (k === "lists" ? "" : (counts[k] || 0)) + "</span>" + CHEV + "</button>").join("") + "</div></section>";
   }
   document.addEventListener("calm:play", function (e) {
     const d = e.detail || {};
@@ -1015,7 +1077,7 @@
 
   const STAGE_NAMES = ["Fresh soil", "A worm moved in", "A sprout!", "Leaves", "A bud", "A lily", "A lily that's awake", "A little garden"];
   function renderCompost() {
-    const el = $("#tab-compost");
+    const el = $("#keepCompost");
     const added = S.compostAdded || 0;
     const stage = compostStage();
     const toNext = 5 - (added % 5);
@@ -1052,16 +1114,11 @@
     if (!m) m = s2.match(/^spotify:(playlist|album|track|artist|episode|show):([A-Za-z0-9]{10,40})$/);
     return m ? { type: m[1], sid: m[2] } : null;
   }
-  function renderSoundsExtras() {
-    const el = $("#spotifyBox");
-    if (!el) return;
+  const LISTEN_SECTIONS = ["shelf", "background", "sound", "spotify"];
+  const LISTEN_LABELS = { shelf: "My files", background: "Background videos", sound: "Soundscapes", spotify: "Spotify" };
+  function spotifyHtml() {
     const list = S.spotify || [];
-    el.innerHTML =
-      '<section class="block"><div class="block-head"><h2>Calm noise</h2><span class="muted small">a soft breeze made inside the app — works offline</span></div>' +
-      '<div class="noise-row"><button type="button" class="btn-soft" data-h-noise aria-pressed="' + !!(S.noise && S.noise.on) + '">' + (S.noise && S.noise.on ? "On" : "Off") + "</button>" +
-      '<label class="vol">Volume <input type="range" id="noiseVol" min="0" max="60" value="' + Math.round(((S.noise && S.noise.vol) || 0.18) * 100) + '"></label></div>' +
-      '<p class="muted small">It pauses by itself while other music plays, and comes back after.</p></section>' +
-      '<section class="block"><div class="block-head"><h2>Spotify</h2><span class="muted small">paste a playlist, album or song link from the Spotify app (Share → Copy link)</span></div>' +
+    return '<section class="block" id="spotify"><p class="muted small">Paste a playlist, album or song link from the Spotify app (Share → Copy link).</p>' +
       '<form class="compost-add" data-h-spotify-form><label class="sr-only" for="spotifyUrl">Spotify link</label>' +
       '<input id="spotifyUrl" placeholder="https://open.spotify.com/playlist/…" autocomplete="off"><button type="submit" class="btn-dark">Add</button></form>' +
       (list.length ? '<div class="spotify-list">' + list.map((x) =>
@@ -1070,12 +1127,58 @@
         '<button type="button" class="link-btn" data-h-spotify-del="' + esc(x.id) + '">Remove</button></div>').join("") + "</div>"
         : '<p class="empty">No Spotify links yet.</p>') +
       '<p class="muted small spotify-help">Full songs play when you\'re logged in to Spotify in this same browser — ' +
-      '<a href="https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F" target="_blank" rel="noopener">log in to Spotify here</a>, then come back and reload. ' +
-      "If a player still plays 30-second previews, tap its Spotify logo or the “Log in” button inside the player.</p>" +
-      "</section>";
+      '<a href="https://accounts.spotify.com/login?continue=https%3A%2F%2Fopen.spotify.com%2F" target="_blank" rel="noopener">log in to Spotify here</a>, then come back and reload.</p></section>';
+  }
+  function nowPlaying() {
+    const cp = window.CalmPlayer;
+    const title = cp && cp.soundTitle ? cp.soundTitle() : "";
+    const kind = cp && cp.soundKind ? cp.soundKind() : "";
+    return { title, kind, on: !!title };
+  }
+  function renderSoundsExtras() {
+    const el = $("#spotifyBox");
+    const tab = $("#tab-sounds");
+    if (!el || !tab) return;
+    const view = LISTEN_SECTIONS.includes(S.listenView) ? S.listenView : "";
+    tab.dataset.view = view || "summary";
+    if (view) {
+      el.innerHTML = '<div class="move-cat-head">' + backRow("Listen", "data-h-listen-view=\"\"") +
+        '<h1 class="page-title">' + esc(LISTEN_LABELS[view]) + "</h1></div>" + (view === "spotify" ? spotifyHtml() : "");
+      return;
+    }
+    const np = nowPlaying();
+    const cp = window.CalmPlayer;
+    const vol = cp && cp.volume ? cp.volume() : 40;
+    const noiseOn = !!(S.noise && S.noise.on);
+    const filesN = document.querySelectorAll("#grid-files .file-tile").length;
+    el.innerHTML = '<section class="block calm-page"><h1 class="page-title">Listen</h1>' +
+      '<div class="now-card' + (np.on ? "" : " idle") + '"><div class="now-top"><div class="row-main"><span id="npKind">' + (np.on ? esc(np.kind) : "Nothing playing") + '</span><b id="npTitle">' +
+      (np.on ? esc(np.title) : (noiseOn ? "Just the calm noise" : "Quiet")) + "</b></div>" +
+      (np.on ? '<button type="button" class="stop-btn" data-h-stop-sound aria-label="Stop"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/></svg></button>' : "") + "</div>" +
+      (np.on ? '<label class="vol">Volume <input type="range" id="listenVol" min="0" max="100" value="' + vol + '"></label>' : "") + "</div>" +
+      '<div class="rows">' +
+      '<div class="row"><span class="row-main"><b>Calm noise</b><span>soft breeze · pauses under music</span></span>' +
+      '<button type="button" class="toggle' + (noiseOn ? " on" : "") + '" data-h-noise aria-pressed="' + noiseOn + '">' + (noiseOn ? "On" : "Off") + "</button></div>" +
+      (noiseOn ? '<div class="row slim"><label class="vol">Calm noise volume <input type="range" id="noiseVol" min="0" max="60" value="' + Math.round(((S.noise && S.noise.vol) || 0.18) * 100) + '"></label></div>' : "") +
+      '<button type="button" class="row row-btn" data-h-listen-view="shelf"><span class="row-main"><b>My files</b><span>' + (filesN ? filesN + " · " : "") + "work without internet</span></span>" + CHEV + "</button>" +
+      '<button type="button" class="row row-btn" data-h-listen-view="background"><span class="row-main"><b>Background videos</b><span>my YouTube playlist</span></span>' + CHEV + "</button>" +
+      '<button type="button" class="row row-btn" data-h-listen-view="spotify"><span class="row-main"><b>Spotify</b><span>' + ((S.spotify || []).length ? (S.spotify.length + " saved") : "add a playlist") + "</span></span>" + CHEV + "</button>" +
+      '<button type="button" class="row row-btn" data-h-listen-view="sound"><span class="row-main"><b>Soundscapes</b><span>rain, bowls, ocean, forest</span></span>' + CHEV + "</button>" +
+      "</div></section>";
     const v = $("#noiseVol");
     if (v) v.addEventListener("input", function () { S.noise = S.noise || {}; S.noise.vol = Number(this.value) / 100; save(); noiseLevel(); });
+    const lv = $("#listenVol");
+    if (lv) lv.addEventListener("input", function () { if (window.CalmPlayer) window.CalmPlayer.setVolume(Number(this.value)); });
   }
+  // keep "Playing" fresh without redrawing the slider
+  let lastNp = "";
+  setInterval(function () {
+    const tab = $("#tab-sounds");
+    if (!tab || tab.hidden || tab.dataset.view !== "summary") return;
+    const np = nowPlaying();
+    const key = np.title + "|" + np.kind;
+    if (key !== lastNp) { lastNp = key; renderSoundsExtras(); }
+  }, 2000);
 
   /* ---------- Calm noise: soft brown noise with a slow "breeze" ---------- */
   let noise = null;
@@ -1115,7 +1218,8 @@
     const sp = $("#splash");
     if (!sp) return;
     const q = QUOTES[0];
-    sp.innerHTML = '<div class="splash-inner">' + mascot(150, "sleepy") +
+    sp.innerHTML = '<div class="splash-inner"><div class="breath small" aria-hidden="true"><div class="breath-glow"></div><div class="breath-flower">' + mascot(130, "sleepy") + "</div></div>" +
+      '<p class="breath-words" aria-live="off"><span class="w1">breathe in</span><span class="w2">hold</span><span class="w3">breathe out</span><span class="w4">hold</span></p>' +
       '<p class="splash-q">“' + esc(q.q) + "”</p><p class=\"splash-by\">— " + esc(q.by) + "</p>" +
       '<p class="splash-sub">Play in this world like a child. That\'s the whole game.</p>' +
       '<button type="button" class="btn-primary soft" id="splashGo">Enter the playground</button>' +
@@ -1138,65 +1242,69 @@
   /* Journal                                                             */
   /* ------------------------------------------------------------------ */
 
-  function renderJournal() {
-    const el = $("#tab-journal");
-    const r = S.journalRange;
-    const list = sessionsIn(r);
-    const mins = list.reduce((n, s) => n + (s.minutes || 0), 0);
-    const lifts = list.map(lift).filter((x) => x != null);
-    // minutes per day
-    const days = r === "week" ? 7 : r === "month" ? 30 : 0;
-    let bars = "";
-    if (days) {
-      const start = rangeStart(r);
-      const perDay = Array.from({ length: days }, (_, i) => {
-        const d0 = start + i * 864e5;
-        return { d: d0, m: list.filter((s) => s.start >= d0 && s.start < d0 + 864e5).reduce((n, s) => n + (s.minutes || 0), 0) };
-      });
-      const max = Math.max(30, ...perDay.map((x) => x.m));
-      const label = perDay.map((x) => new Date(x.d).toLocaleDateString(undefined, { weekday: "short" }) + " " + x.m + " min").join(", ");
-      bars = '<div class="panel"><span class="panel-title">Minutes per day</span><div class="bars" role="img" aria-label="' + esc(label) + '">' +
-        perDay.map((x) => '<div class="bar-col"><div class="bar-fill" style="height:' + Math.round((x.m / max) * 100) + '%"></div>' +
-          (days === 7 ? '<span>' + new Date(x.d).toLocaleDateString(undefined, { weekday: "narrow" }) + "</span>" : "") + "</div>").join("") +
-        "</div></div>";
-    }
-    const lp = liftByPassion(list);
-    const reasons = {};
-    list.forEach((s) => (s.reasons || []).forEach((x) => { reasons[x] = (reasons[x] || 0) + 1; }));
-    const topReasons = Object.entries(reasons).sort((a, b) => b[1] - a[1]).slice(0, 4);
-    const thoughts = {};
-    list.forEach((s) => { const t = (s.thought || "").trim(); if (t) { const k = t.toLowerCase(); thoughts[k] = thoughts[k] || { t, n: 0 }; thoughts[k].n++; } });
-    const topThoughts = Object.values(thoughts).sort((a, b) => b.n - a.n).slice(0, 5);
+  function insight() {
+    const week = sessionsIn("week");
+    if (!week.length) return "Whatever you do this week will gather here, kindly.";
+    const lp = liftByPassion(week).filter((x) => x.lift > 0);
     const hours = {};
-    list.filter((s) => (s.reasons || []).length).forEach((s) => { const h = new Date(s.start).getHours(); hours[h] = (hours[h] || 0) + 1; });
+    week.filter((x) => (x.reasons || []).length).forEach((x) => { const h = new Date(x.start).getHours(); hours[h] = (hours[h] || 0) + 1; });
     const peak = Object.entries(hours).sort((a, b) => b[1] - a[1])[0];
-    const best = lp[0];
-    let pattern = "";
-    if (peak && peak[1] >= 2) {
-      pattern = "Most of your urges come around " + String(peak[0]).padStart(2, "0") + ":00" +
-        (topReasons[0] ? ", often when you're “" + topReasons[0][0].toLowerCase() + "”" : "") + "." +
-        (best && best.lift > 0 ? " " + (passionById(best.id) || { name: "Your passions" }).name + " lifts your mood the most (" + signed(best.lift) + ")." : "");
-    }
-    el.innerHTML =
-      '<section class="block"><div class="block-head"><h1 class="page-title">Journal</h1>' +
-      '<div class="chip-row">' + [["week", "Week"], ["month", "Month"], ["all", "All time"]].map(([k, l]) =>
-        '<button type="button" class="pill' + (r === k ? " active" : "") + '" data-h-range="' + k + '">' + l + "</button>").join("") + "</div></div>" +
-      '<div class="stat-row"><div><b>' + fmtMin(mins) + "</b><span>of things I love</span></div><div><b>" + list.length + "</b><span>sessions</span></div>" +
-      "<div><b>" + (lifts.length ? signed(avg(lifts)) : "—") + "</b><span>average mood lift</span></div><div><b>" + streak() + "</b><span>day streak</span></div></div>" +
-      (pattern ? '<div class="pattern"><span class="eyebrow light">A pattern I noticed</span><p>' + esc(pattern) + "</p></div>" : "") +
-      '<div class="journal-grid">' + bars +
-      '<div class="panel"><span class="panel-title">What lifts me most (before → after)</span>' +
-      (lp.length ? lp.slice(0, 6).map((x) => '<div class="kv"><span>' + esc((passionById(x.id) || { name: x.id }).name) + "</span><b>" + signed(x.lift) + "</b></div>").join("") : '<span class="muted small">After a few sessions you\'ll see which passions help most.</span>') + "</div>" +
-      '<div class="panel"><span class="panel-title">What pulls me toward scrolling</span>' +
-      (topReasons.length ? topReasons.map(([k, n]) => '<div class="kv"><span>' + esc(k) + "</span><b>" + n + "×</b></div>").join("") : '<span class="muted small">Nothing logged yet.</span>') + "</div>" +
-      '<div class="panel"><span class="panel-title">Thoughts that came back most</span>' +
-      (topThoughts.length ? topThoughts.map((x) => '<div class="kv"><i>“' + esc(x.t) + "”</i><b>" + x.n + "×</b></div>").join("") : '<span class="muted small">Write the thought word for word in the check-in and it shows here.</span>') + "</div>" +
-      "</div>" +
-      '<h2 class="sub-h">Sessions</h2>' +
-      (list.length ? '<div class="sess-list">' + list.slice().reverse().map((s) => sessionRow(s, true) + (s.notes ? '<details class="sess-pages"><summary>My pages / notes</summary><p>' + esc(s.notes) + "</p></details>" : "")).join("") + "</div>"
-        : '<p class="empty">No sessions in this period yet.</p>') +
-      '<p class="muted small"><button type="button" class="link-btn" data-h-export>Export my journal</button> · everything stays in this browser.</p>' +
-      "</section>";
+    const parts = [];
+    if (lp[0]) parts.push(((passionById(lp[0].id) || {}).name || "One thing") + " lifted you the most this week.");
+    if (peak && peak[1] >= 2) parts.push("Most urges came around " + (Number(peak[0]) % 12 || 12) + (Number(peak[0]) < 12 ? " am." : " pm."));
+    if (!parts.length) parts.push("You spent time with yourself " + week.length + (week.length === 1 ? " time" : " times") + " this week.");
+    return parts.join(" ");
+  }
+  function moodWords(x) {
+    const b = ((x.before && x.before.feelings) || []).join(", ");
+    const a = ((x.after && x.after.feelings) || []).join(", ");
+    if (x.moment) return [x.minutes ? fmtMin(x.minutes) : "a moment", a].filter(Boolean).join(" · ");
+    if (b && a) return b.toLowerCase() + " → " + a.toLowerCase();
+    return (a || b || "").toLowerCase();
+  }
+  function renderJournal() {
+    const el = $("#keepJournal");
+    const limit = S.journalLimit || 40;
+    const list = S.sessions.slice().sort((a, b) => b.start - a.start);
+    const shown = list.slice(0, limit);
+    const groups = [];
+    shown.forEach((x) => {
+      const k = dayKey(x.start);
+      let g = groups[groups.length - 1];
+      if (!g || g.k !== k) { g = { k, t: x.start, items: [] }; groups.push(g); }
+      g.items.push(x);
+    });
+    const today = dayKey(Date.now()), yest = dayKey(Date.now() - 864e5);
+    const dayName = (g) => g.k === today ? "Today" : g.k === yest ? "Yesterday" :
+      new Date(g.t).toLocaleDateString(undefined, Date.now() - g.t < 6 * 864e5 ? { weekday: "long" } : { weekday: "short", day: "numeric", month: "short" });
+    el.innerHTML = '<section class="block calm-page">' +
+      '<p class="insight">' + esc(insight()) + "</p>" +
+      (groups.length ? groups.map((g) => '<div class="day"><span class="day-name">' + esc(dayName(g)) + '</span><div class="rows">' +
+        g.items.map((x) => {
+          const p = passionById(x.passion);
+          const name = x.moment ? x.passionName : ((p && p.name) || x.passionName || "Session") + (x.minutes ? " · " + fmtMin(x.minutes) : "");
+          const extra = [x.thought ? "Thought before: “" + x.thought + "”" : "", x.note || "", x.prompt && !x.moment ? "Prompt: " + x.prompt : ""].filter(Boolean);
+          return '<details class="jrow"><summary><span class="jtime">' + new Date(x.start).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) + "</span>" +
+            '<span class="row-main"><b>' + esc(name) + "</b><span>" + esc(moodWords(x)) + "</span></span></summary>" +
+            '<div class="jmore">' + extra.map((t) => "<p>" + esc(t) + "</p>").join("") +
+            (x.notes ? '<p class="jpages">' + esc(x.notes) + "</p>" : "") +
+            '<button type="button" class="link-btn" data-h-del-session="' + esc(x.id) + '">Delete</button></div></details>';
+        }).join("") + "</div></div>").join("")
+        : '<p class="empty">Nothing here yet. Everything you do — and every little moment you keep — gathers here.</p>') +
+      (list.length > limit ? '<button type="button" class="wide-btn" data-h-more-journal>Show earlier days</button>' : "") +
+      '<p class="muted small center"><button type="button" class="link-btn" data-h-export>Export my journal</button></p></section>';
+  }
+
+  function renderKeep() {
+    const v = S.keepView === "journal" ? "journal" : "compost";
+    $$("#tab-keep .seg-tabs a").forEach((a) => {
+      const on = a.dataset.keep === v;
+      a.classList.toggle("active", on);
+      a.setAttribute("aria-selected", String(on));
+    });
+    $("#keepCompost").hidden = v !== "compost";
+    $("#keepJournal").hidden = v !== "journal";
+    if (v === "compost") renderCompost(); else renderJournal();
   }
 
   /* ------------------------------------------------------------------ */
@@ -1260,6 +1368,40 @@
       b.textContent = S.gentle ? "Show numbers again" : "Gentle mode: hide numbers";
       toast(S.gentle ? "Numbers hidden" : "Numbers back"); return;
     }
+    if (d.hLen) { S.playLen = d.hLen; save(); renderPassions(); return; }
+    if (d.hPlayView) { S.playView = d.hPlayView; save(); renderPassions(); window.scrollTo({ top: 0 }); return; }
+    if (d.hPlayRow) {
+      const len = S.playLen || "2";
+      quickStart(d.hPlayRow, len === "2" ? 2 : len === "15" ? 15 : 0);
+      return;
+    }
+    if (d.hMpStep) {
+      const steps = MED_TIMES;
+      const cur = S.medMinutes || 10;
+      let i = steps.indexOf(cur); if (i === -1) i = 1;
+      i = Math.max(0, Math.min(steps.length - 1, i + Number(d.hMpStep)));
+      S.medMinutes = steps[i]; save(); renderMeditate(); return;
+    }
+    if (d.hMpBells !== undefined) {
+      const ivs = MED_INTERVALS.map((x) => x.m);
+      const cur = S.medInterval != null ? S.medInterval : 5;
+      S.medInterval = ivs[(ivs.indexOf(cur) + 1) % ivs.length]; save(); renderMeditate(); return;
+    }
+    if (d.hMpSnd !== undefined) {
+      const ids = MED_SOUNDS.map((x) => x.id);
+      S.medSound = ids[(ids.indexOf(S.medSound || "bowl") + 1) % ids.length]; save(); ringBell(S.medSound, 1); renderMeditate(); return;
+    }
+    if (d.hMoveView !== undefined) { S.moveView = d.hMoveView; save(); renderMoveTop(); window.scrollTo({ top: 0 }); return; }
+    if (d.hContinue) {
+      S.moveView = MOVE_SECTIONS.includes(d.sec) ? d.sec : "yoga"; save(); renderMoveTop();
+      if (window.CalmPlayer) window.CalmPlayer.play(d.hContinue);
+      return;
+    }
+    if (d.hOpenAdd !== undefined) { const b2 = $("#openAdd"); if (b2) b2.click(); return; }
+    if (d.hListenView !== undefined) { S.listenView = d.hListenView; save(); renderSoundsExtras(); window.scrollTo({ top: 0 }); return; }
+    if (d.hStopSound !== undefined) { if (window.CalmPlayer) window.CalmPlayer.stopSound(); setTimeout(renderSoundsExtras, 60); return; }
+    if (d.hMoreJournal !== undefined) { S.journalLimit = (S.journalLimit || 40) + 40; renderJournal(); return; }
+    if (d.keep) { /* handled by the link's hash */ }
     if (d.hMpMin) { S.medMinutes = Number(d.hMpMin); save(); renderMeditate(); return; }
     if (d.hMpInt !== undefined) { S.medInterval = Number(d.hMpInt); save(); renderMeditate(); return; }
     if (d.hMpSound) { S.medSound = d.hMpSound; save(); ringBell(d.hMpSound, 1); renderMeditate(); return; }
@@ -1355,7 +1497,7 @@
     if (d.hBegin !== undefined) { begin(); return; }
     if (d.hFlowPrompt !== undefined) {
       const p = passionById(S.active.passion);
-      nextPrompt(p.id); S.active.prompt = promptFor(p); save(); renderDoing(); return;
+      nextPrompt(p.id); S.active.prompt = promptFor(p); S.active.look = lookFor(p); save(); renderDoing(); return;
     }
     if (d.hNextReminder !== undefined) { S.reminderIndex = (S.reminderIndex || 0) + 1; save(); renderDoing(); return; }
     if (d.hSound !== undefined) { if (window.CalmPlayer) window.CalmPlayer.playSound(d.hSound); setTimeout(renderDoing, 50); return; }
