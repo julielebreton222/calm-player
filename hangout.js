@@ -205,6 +205,12 @@
       energy: "",
       minutes: 20,
       reminderIndex: 0,
+      compost: [],
+      compostAdded: 0,
+      yoga: [],
+      spotify: [],
+      gentle: false,
+      noise: { on: true, vol: 0.18 },
     };
   }
   let S = (() => {
@@ -214,6 +220,7 @@
   function forget(id) { S.deleted = (S.deleted || []).concat(id).slice(-2000); }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* keep working in memory */ } }
 
+  const TINY = ["playlists", "dancing", "singing", "talking", "dolls", "song"];
   function passions() {
     return PASSIONS.concat(S.customPassions).filter((p) => !S.hiddenPassions.includes(p.id));
   }
@@ -226,7 +233,11 @@
   ];
   function taskAsPassion(t) { return { id: t.id, name: t.name, color: "#D9BFC5", task: true, energy: [], prompts: TASK_PROMPTS }; }
   function tasks() { return (S.tasks || []).map(taskAsPassion); }
-  function passionById(id) { return PASSIONS.concat(S.customPassions, tasks()).find((p) => p.id === id) || null; }
+  function ideaAsPassion(c) { return { id: "idea:" + c.id, name: c.text, color: "#C9D9C0", idea: true, energy: [], prompts: ["Start with the very first tiny bit of it. That's enough."] }; }
+  function passionById(id) {
+    if (id && id.startsWith("idea:")) { const c = (S.compost || []).find((x) => "idea:" + x.id === id); return c ? ideaAsPassion(c) : null; }
+    return PASSIONS.concat(S.customPassions, tasks()).find((p) => p.id === id) || null;
+  }
   function addTask(name) {
     const clean = (name || "").trim().slice(0, 50);
     if (!clean) return null;
@@ -309,7 +320,7 @@
   /* Tabs & routing                                                      */
   /* ------------------------------------------------------------------ */
 
-  const TABS = ["today", "passions", "move", "sounds", "journal", "spells"];
+  const TABS = ["today", "passions", "compost", "meditate", "move", "sounds", "journal", "spells"];
   function showTab(id, scrollTarget) {
     if (!TABS.includes(id)) id = "today";
     TABS.forEach((t) => { const el = $("#tab-" + t); if (el) el.hidden = t !== id; });
@@ -324,7 +335,7 @@
   }
   function route() {
     const h = decodeURIComponent(location.hash || "");
-    if (h.startsWith("#/")) { showTab(h.slice(2)); return; }
+    if (h.startsWith("#/")) { showTab(h.slice(2) === "playground" ? "today" : h.slice(2)); return; }
     if (h.length > 1) {
       const el = document.getElementById(h.slice(1));
       const tab = el && el.closest(".tab");
@@ -333,7 +344,12 @@
     showTab("today");
   }
   function renderTab(id) {
+    document.body.classList.toggle("gentle", !!S.gentle);
     if (id === "today") renderToday();
+    if (id === "compost") renderCompost();
+    if (id === "meditate") renderMeditate();
+    if (id === "move") renderYoga();
+    if (id === "sounds") renderSoundsExtras();
     if (id === "passions") renderPassions();
     if (id === "journal") renderJournal();
     if (id === "spells") renderSpells();
@@ -377,42 +393,99 @@
       "</article>";
   }
 
+  /* ---------- little drawings: an original flower-face friend + doodle icons ---------- */
+  let mascotN = 0;
+  function mascot(size, mood) {
+    const gid = "pg" + (++mascotN);
+    const petals = [0, 60, 120, 180, 240, 300].map((r, i) =>
+      '<g transform="rotate(' + r + ' 50 50)"><ellipse cx="50" cy="22" rx="15" ry="24" fill="url(#' + gid + ')"/>' +
+      '<circle cx="46" cy="14" r="1.3" fill="#8A2A45"/><circle cx="53" cy="20" r="1.1" fill="#8A2A45"/><circle cx="48" cy="27" r="1" fill="#8A2A45"/>' +
+      (i % 2 ? '<circle cx="55" cy="11" r="0.9" fill="#8A2A45"/>' : "") + "</g>").join("");
+    const eyes = mood === "awake"
+      ? '<circle cx="42" cy="50" r="2.4" fill="#5A2638"/><circle cx="58" cy="50" r="2.4" fill="#5A2638"/>'
+      : '<path d="M37.5 50 q4.5 3.2 9 0" stroke="#5A2638" stroke-width="2" fill="none" stroke-linecap="round"/><path d="M53.5 50 q4.5 3.2 9 0" stroke="#5A2638" stroke-width="2" fill="none" stroke-linecap="round"/>';
+    return '<svg class="mascot" width="' + size + '" height="' + size + '" viewBox="0 0 100 100" aria-hidden="true">' +
+      '<defs><radialGradient id="' + gid + '" cx="50%" cy="80%" r="80%"><stop offset="0" stop-color="#E0458A"/><stop offset=".55" stop-color="#F48FB8"/><stop offset="1" stop-color="#FCE1EC"/></radialGradient></defs>' +
+      petals +
+      '<circle cx="50" cy="52" r="19" fill="#F7C9AA"/>' +
+      '<ellipse cx="38" cy="58" rx="5" ry="3.2" fill="#F29AB5" opacity=".75"/><ellipse cx="62" cy="58" rx="5" ry="3.2" fill="#F29AB5" opacity=".75"/>' +
+      '<circle cx="36" cy="56" r=".8" fill="#A04A55"/><circle cx="39" cy="59" r=".8" fill="#A04A55"/><circle cx="61" cy="56" r=".8" fill="#A04A55"/><circle cx="64" cy="59" r=".8" fill="#A04A55"/>' +
+      eyes + '<ellipse cx="50" cy="61" rx="2.6" ry="3.2" fill="#8A3A3A"/></svg>';
+  }
+  const ICONS = {
+    passions: '<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/>',
+    compost: '<path d="M4 18h16M6 18c0-3 2.5-5 6-5s6 2 6 5"/><path d="M12 13V8m0 0c-2 0-3.5-1.5-3.5-3.5C10.5 4.5 12 6 12 8zm0 0c2 0 3.5-1.5 3.5-3.5C13.5 4.5 12 6 12 8z"/>',
+    meditate: '<circle cx="12" cy="6" r="2.5"/><path d="M5 19c2-1 4-1.5 7-1.5s5 .5 7 1.5M8 15l4-4 4 4M12 11v-2"/>',
+    move: '<circle cx="14" cy="5" r="2"/><path d="M6 20l4-6 3 2 2-5 4 3M10 14l-1-4 5-1"/>',
+    sounds: '<path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/>',
+    journal: '<path d="M6 4h10a2 2 0 0 1 2 2v14H8a2 2 0 0 1-2-2z"/><path d="M6 18a2 2 0 0 1 2-2h10M10 8h5M10 11h4"/>',
+    spells: '<path d="M12 3l1.8 4.6L18 9l-4.2 1.4L12 15l-1.8-4.6L6 9l4.2-1.4z"/><path d="M18 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/>',
+    people: '<circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.3"/><path d="M3.5 19c.8-3 3-4.5 5.5-4.5s4.7 1.5 5.5 4.5M14.5 14.5c2.5-.3 4.8 1 5.5 3.5"/>',
+  };
+  function icon(name, size) {
+    return '<svg width="' + (size || 22) + '" height="' + (size || 22) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICONS[name] || "") + "</svg>";
+  }
+
+  // Short lines to open the playground with. Attributed lines are real quotations; the rest are my own words or yours.
+  const QUOTES = [
+    { q: "In the true man there is a child hidden — it wants to play.", by: "Friedrich Nietzsche, Thus Spoke Zarathustra" },
+    { q: "Child spirit. Doing me, with joy.", by: "what I remember from Kitty Lever" },
+    { q: "Hard work and curiosity.", by: "what I remember from Xenia Adonts" },
+    { q: "Art comes out of loneliness. It is good.", by: "what I remember from Heaven Sent Honey" },
+  ];
+  function todaysQuote() { return QUOTES[Math.floor(Date.now() / 864e5) % QUOTES.length]; }
+
   function renderToday() {
     const el = $("#tab-today");
     const week = sessionsIn("week");
     const mins = week.reduce((n, s) => n + (s.minutes || 0), 0);
     const urges = week.filter((s) => (s.reasons || []).length).length;
-    const lifts = week.map(lift).filter((x) => x != null);
-    const st = streak();
-    const sug = suggestFor([], S.energy);
+    const days = new Set(week.map((s) => dayKey(s.start))).size;
+    const yogaWeek = (S.yoga || []).filter((y) => y.t >= rangeStart("week")).length;
+    const ideas = (S.compost || []).filter((c) => !c.done).length;
+    const q = todaysQuote();
+    const h = new Date().getHours();
+    const hello = h < 5 ? "Still up, " : h < 12 ? "Good morning, " : h < 18 ? "Hello, " : "Good evening, ";
+    const tile = (href, ic, title, line, cls) =>
+      '<a class="tile ' + (cls || "") + '" href="' + href + '"><span class="tile-ic">' + icon(ic, 26) + '</span><b>' + esc(title) + "</b><span>" + esc(line) + "</span></a>";
     el.innerHTML =
-      '<section class="hero">' +
-      '<div class="hero-text"><span class="eyebrow light">' + esc(greeting()) + "</span>" +
-      "<h1>Reaching for your phone, " + esc(S.name) + "? Let's do something you love.</h1>" +
-      "<p>Take 20 seconds to notice what pulled you here, then pick a passion. I'll time it and ask how you feel after.</p>" +
-      '<div class="hero-btns"><button type="button" class="btn-light" data-h-urge>I feel the urge to scroll</button>' +
-      '<button type="button" class="btn-ghost" data-h-pick>Pick something for me</button></div>' +
-      (S.active ? '<button type="button" class="btn-light resume" data-h-resume>Back to my ' + esc((passionById(S.active.passion) || {}).name || "session") + "</button>" : "") +
-      "</div>" +
-      '<div class="hero-stats">' +
-      '<div><b>' + fmtMin(mins) + "</b><span>on my passions this week</span></div>" +
-      "<div><b>" + urges + "</b><span>scroll urges turned into something else</span></div>" +
-      "<div><b>" + (lifts.length ? signed(avg(lifts)) : "—") + "</b><span>average mood lift, before → after</span></div>" +
-      "<div><b>" + st + (st === 1 ? " day" : " days") + "</b><span>in a row with a passion session</span></div>" +
+      '<section class="play-hero">' +
+      '<div class="play-face">' + mascot(118, "sleepy") + "</div>" +
+      '<div class="play-text"><span class="eyebrow">' + esc(greeting()) + "</span>" +
+      "<h1>" + esc(hello + S.name) + ". What shall we play with?</h1>" +
+      '<p class="play-quote">“' + esc(q.q) + '” <span>— ' + esc(q.by) + "</span></p>" +
+      '<div class="hero-btns">' +
+      '<button type="button" class="btn-primary soft" data-h-urge>I want to scroll…</button>' +
+      '<button type="button" class="btn-soft big" data-h-moment>I just did something</button>' +
+      '<button type="button" class="btn-soft big" data-h-pick>Pick one for me</button></div>' +
+      (S.active ? '<button type="button" class="btn-primary soft resume" data-h-resume>Back to my ' + esc((passionById(S.active.passion) || {}).name || "session") + "</button>" : "") +
       "</div></section>" +
 
-      '<section class="block"><div class="block-head"><h2>My people · what I remember from them</h2>' +
+      '<section class="block"><h2 class="sr-only">Places in my playground</h2><div class="tiles">' +
+      tile("#/passions", "passions", "Things I love", "tiny things to start with", "t-pink") +
+      tile("#/compost", "compost", "Compost", ideas ? ideas + (ideas === 1 ? " idea resting" : " ideas resting") : "keep ideas for later", "t-green") +
+      tile("#/meditate", "meditate", "Meditate", "a timer with singing bowls", "t-blue") +
+      tile("#/move", "move", "Move & yoga", yogaWeek ? yogaWeek + " yoga this week" : "yoga, dance, stretch", "t-peach") +
+      tile("#/sounds", "sounds", "Sounds", "calm noise, playlists, Spotify", "t-lilac") +
+      tile("#/journal", "journal", "Journal", "everything I did, kindly", "t-pink") +
+      tile("#/spells", "spells", "Spell book", "little magic for real life", "t-blue") +
+      tile("#people", "people", "My people", "what I remember from them", "t-peach") +
+      "</div></section>" +
+
+      '<section class="block soft-stats"><div class="block-head"><h2>This week, gently</h2></div><div class="mini-stats">' +
+      "<div><b>" + fmtMin(mins) + "</b><span>with myself, doing things</span></div>" +
+      "<div><b>" + days + (days === 1 ? " day" : " days") + "</b><span>I played</span></div>" +
+      "<div><b>" + urges + "</b><span>scroll urges turned into something</span></div></div></section>" +
+
+      '<section class="block" id="people"><div class="block-head"><h2>My people · what I remember from them</h2>' +
       '<span class="muted small">Shown during every session, one at a time</span></div>' + peopleHtml() + "</section>" +
 
-      '<section class="block"><div class="block-head"><h2>How do I feel right now?</h2></div>' +
-      '<div class="chip-row">' + ENERGY.map((e) => '<button type="button" class="chip pink" data-h-energy="' + e.id + '" aria-pressed="' + (S.energy === e.id) + '">' + esc(e.label) + "</button>").join("") + "</div>" +
-      '<div class="grid sugg">' + sug.map((x) => suggestCard(x.p, x.why)).join("") + "</div></section>" +
-
-      '<section class="block"><div class="block-head"><h2>Lately, instead of scrolling</h2><a href="#/journal">See my journal</a></div>' +
+      '<section class="block"><div class="block-head"><h2>Lately</h2><a href="#/journal">My journal</a></div>' +
       (S.sessions.length
         ? '<div class="sess-list">' + S.sessions.slice(-3).reverse().map((s) => sessionRow(s, false)).join("") + "</div>"
-        : '<p class="empty">Your first session will show up here. Tap “I feel the urge to scroll” or start any passion.</p>') +
-      "</section>";
+        : '<p class="empty">Whatever you do will gather here, like petals. Tap “I just did something” any time.</p>') +
+      "</section>" +
+      '<p class="gentle-line"><button type="button" class="link-btn" data-h-gentle>' + (S.gentle ? "Show numbers again" : "Gentle mode: hide numbers and counts") + "</button></p>";
   }
 
   function suggestCard(p, why) {
@@ -434,11 +507,14 @@
   function renderPassions() {
     const el = $("#tab-passions");
     el.innerHTML =
-      '<section class="block"><div class="block-head"><h1 class="page-title">My passions</h1>' +
-      '<span class="muted small">Each one has a tiny first step, so starting is easy</span></div>' +
+      '<section class="block"><div class="block-head"><h1 class="page-title">Things I love</h1>' +
+      '<span class="muted small">No need to feel like it first. “Just 2 min” skips the questions — you can always stop.</span></div>' +
       '<div class="chip-row" role="group" aria-label="Session length"><span class="muted small">How long?</span>' +
       TIMES.map((t) => '<button type="button" class="chip" data-h-minutes="' + t.m + '" aria-pressed="' + (S.minutes === t.m) + '">' + t.label + "</button>").join("") + "</div>" +
-      '<div class="grid passions">' + passions().map(passionCard).join("") +
+      '<h2 class="sub-h">Tiny things · 2–5 minutes</h2>' +
+      '<div class="grid passions">' + passions().filter((p) => TINY.includes(p.id)).map(passionCard).join("") + "</div>" +
+      '<h2 class="sub-h">Cozy things · when I have a little more time</h2>' +
+      '<div class="grid passions">' + passions().filter((p) => !TINY.includes(p.id)).map(passionCard).join("") +
       '<button type="button" class="passion add" data-h-add-passion>+ Add a passion</button></div></section>' +
       '<section class="block avoid-block"><div class="block-head"><h2>Things I tend to avoid</h2>' +
       '<span class="muted small">When scrolling is really avoiding, do 10 brave minutes of one of these</span></div>' +
@@ -472,6 +548,7 @@
       '<span class="passion-step">Tiny step: ' + esc(promptFor(p)) + "</span>" +
       '<span class="passion-stat">' + (st.n ? fmtMin(st.mins) + " this week · " + st.n + (st.n === 1 ? " session" : " sessions") : "Not yet this week") + "</span>" +
       '<div class="passion-btns"><button type="button" class="' + (p.dark ? "btn-light" : "btn-dark") + ' grow" data-h-start="' + esc(p.id) + '">Start</button>' +
+      '<button type="button" class="btn-soft" data-h-two="' + esc(p.id) + '" title="Skip the questions and just begin">Just 2 min</button>' +
       '<button type="button" class="btn-soft" data-h-next-prompt="' + esc(p.id) + '">Another idea</button>' +
       (p.id === "spell" ? '<a class="btn-soft" href="#/spells">Spell book</a>' : "") +
       (p.id === "dancing" ? '<a class="btn-soft" href="#dance">Classes</a>' : "") +
@@ -593,6 +670,7 @@
           '<button type="button" class="link-btn" data-h-med-test>Listen</button></div>' +
           '<span class="muted small">A bell at the start, ' + (d.med.interval ? "every " + d.med.interval + " min, " : "") + "and three at the end.</span></div>"
         : '<div class="chip-row" role="group" aria-label="Length">' + TIMES.map((t) => '<button type="button" class="chip" data-h-flow-min="' + t.m + '" aria-pressed="' + (d.minutes === t.m) + '">' + t.label + "</button>").join("") + "</div>") +
+      '<button type="button" class="link-btn center" data-h-skip>Skip the questions and just begin</button>' +
       '<button type="button" class="btn-primary" data-h-begin>' + (d.passion ? (passionById(d.passion).task ? "Start 10 brave minutes · " : "Start ") + esc(passionById(d.passion).name) : "Start") + "</button>";
     $("#hMood").addEventListener("input", function () { d.mood = Number(this.value); $("#hMoodVal").textContent = d.mood + "/10"; });
     $("#hThought").addEventListener("input", function () { d.thought = this.value; });
@@ -604,7 +682,7 @@
     if (!d.passion) { toast("Pick a passion first"); $("#hPassion").focus(); return; }
     S.active = {
       id: uid(), passion: d.passion, start: Date.now(), planned: d.minutes, pausedMs: 0, pausedAt: null,
-      reasons: d.reasons, thought: d.thought.trim(), before: { feelings: d.feelings, mood: d.mood },
+      reasons: d.reasons, thought: d.thought.trim(), before: { feelings: d.feelings, mood: d.skipped ? null : d.mood },
       prompt: promptFor(passionById(d.passion)), parked: [], notes: "",
     };
     if (d.passion === "meditation") {
@@ -689,7 +767,7 @@
   function renderCheckOut() {
     const a = S.active;
     const p = passionById(a.passion) || { name: "Session" };
-    if (!a.after) a.after = { feelings: [], mood: a.before.mood };
+    if (!a.after) a.after = { feelings: [], mood: a.before.mood != null ? a.before.mood : 6 };
     clearInterval(tick);
     if (!a.pausedAt) { a.pausedAt = Date.now(); save(); }
     const mins = Math.max(1, Math.round(elapsedMs(a) / 60000));
@@ -698,7 +776,7 @@
       '<h2 id="flowTitle" class="flow-h">You chose this over scrolling. How do you feel now?</h2>' +
       '<div class="flow-card light"><span class="eyebrow">Before, you ' + (a.thought ? "thought" : "felt") + "</span>" +
       (a.thought ? "<i>“" + esc(a.thought) + "”</i>" : "") +
-      '<span class="muted small">' + esc((a.before.feelings || []).join(", ") || "—") + " · mood " + a.before.mood + "/10</span></div>" +
+      '<span class="muted small">' + esc((a.before.feelings || []).join(", ") || "—") + (a.before.mood != null ? " · mood " + a.before.mood + "/10" : " · you skipped the questions, that's fine") + "</span></div>" +
       chipGroup("after", FEEL_AFTER.concat(a.after.feelings.filter((f) => !FEEL_AFTER.includes(f))), a.after.feelings, "sage") +
       '<button type="button" class="link-btn" data-h-own-after>+ my own word</button>' +
       '<label class="vol">Mood <input type="range" id="hMoodAfter" min="1" max="10" value="' + a.after.mood + '"> <b id="hMoodAfterVal">' + a.after.mood + '/10</b> <span class="lift" id="hLift"></span></label>' +
@@ -707,6 +785,7 @@
       '<div class="flow-btns"><button type="button" class="btn-ghost-dark" data-h-back-doing>Keep going</button>' +
       '<button type="button" class="btn-primary" data-h-save>Save to my journal</button></div>';
     const showLift = () => {
+      if (a.before.mood == null) { $("#hLift").textContent = ""; return; }
       const l = a.after.mood - a.before.mood;
       const el = $("#hLift");
       el.textContent = (l > 0 ? "+" : "") + l;
@@ -731,6 +810,280 @@
     closeFlow();
     const l = S.sessions[S.sessions.length - 1];
     toast("Saved · " + fmtMin(mins) + (lift(l) != null ? " · mood " + signed(lift(l)) : ""));
+  }
+
+  /* ---------- Quick starts: "Just 2 min", meditation without questions ---------- */
+  function quickStart(pid, minutes, med) {
+    if (S.active) { openFlow(); renderDoing(); return; }
+    const p = passionById(pid);
+    if (!p) return;
+    S.active = {
+      id: uid(), passion: pid, start: Date.now(), planned: minutes, pausedMs: 0, pausedAt: null,
+      reasons: [], thought: "", before: { feelings: [], mood: null }, prompt: promptFor(p), parked: [], notes: "",
+    };
+    if (med) {
+      S.active.med = { interval: med.interval, sound: med.sound, bells: 0, endRung: false };
+      ringBell(med.sound, 1);
+    }
+    save();
+    openFlow();
+    renderDoing();
+  }
+
+  /* ---------- "I just did something": log a random moment, no timer ---------- */
+  let momentDraft = null;
+  function openMoment() {
+    momentDraft = { text: "", feelings: [], minutes: 0 };
+    openFlow();
+    renderMoment();
+  }
+  function renderMoment() {
+    const m = momentDraft;
+    $("#flowInner").innerHTML =
+      '<div class="flow-top"><span class="eyebrow">A little moment</span>' +
+      '<button type="button" class="icon-btn" data-h-close aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      '<div class="moment-face">' + mascot(90, "awake") + "</div>" +
+      '<h2 id="flowTitle" class="flow-h">What did you do? Anything counts.</h2>' +
+      '<label class="field"><span class="sr-only">What I did</span><textarea id="mText" rows="2" placeholder="e.g. watered the basil, danced to one song, looked at clouds">' + esc(m.text) + "</textarea></label>" +
+      '<div class="field"><span>About how long?</span><div class="chip-row">' +
+      [[0, "A moment"], [5, "5 min"], [15, "15 min"], [30, "30 min"], [60, "An hour+"]].map(([v, l]) =>
+        '<button type="button" class="chip" data-h-m-min="' + v + '" aria-pressed="' + (m.minutes === v) + '">' + l + "</button>").join("") + "</div></div>" +
+      '<div class="field"><span>How do I feel?</span>' + chipGroup("mfeel", FEEL_AFTER, m.feelings, "sage") + "</div>" +
+      '<button type="button" class="btn-primary" data-h-m-save>Keep it in my journal</button>';
+    $("#mText").addEventListener("input", function () { m.text = this.value; });
+    $("#mText").focus();
+  }
+  function saveMoment() {
+    const m = momentDraft;
+    const text = (m.text || "").trim();
+    if (!text) { toast("Write a few words about what you did"); $("#mText").focus(); return; }
+    S.sessions.push({ id: uid(), passion: "moment", passionName: text.slice(0, 60), moment: true, start: Date.now(), minutes: m.minutes,
+      reasons: [], thought: "", before: { feelings: [], mood: null }, after: { feelings: m.feelings, mood: null }, note: text.length > 60 ? text : "", parked: [] });
+    momentDraft = null;
+    save();
+    closeFlow();
+    toast("Kept. That was you, spending time with you.");
+  }
+
+  /* ---------- Meditate tab ---------- */
+  function renderMeditate() {
+    const el = $("#tab-meditate");
+    const m = { minutes: S.medMinutes || 10, interval: S.medInterval != null ? S.medInterval : 5, sound: S.medSound || "bowl" };
+    const done = S.sessions.filter((x) => x.passion === "meditation");
+    const total = done.reduce((n, x) => n + (x.minutes || 0), 0);
+    el.innerHTML =
+      '<section class="block med-page"><div class="med-head">' + mascot(96, "sleepy") +
+      '<div><h1 class="page-title">Meditate</h1><span class="muted">Sit, breathe, let the bowl keep time for you.</span></div></div>' +
+      '<div class="med-set big"><span class="eyebrow">How long</span><div class="chip-row">' +
+      MED_TIMES.map((x) => '<button type="button" class="chip" data-h-mp-min="' + x + '" aria-pressed="' + (m.minutes === x) + '">' + x + " min</button>").join("") + "</div>" +
+      '<span class="eyebrow">Bells in between</span><div class="chip-row">' +
+      MED_INTERVALS.map((x) => '<button type="button" class="chip" data-h-mp-int="' + x.m + '" aria-pressed="' + (m.interval === x.m) + '">' + x.label + "</button>").join("") + "</div>" +
+      '<span class="eyebrow">Sound</span><div class="chip-row">' +
+      MED_SOUNDS.map((x) => '<button type="button" class="chip sage" data-h-mp-sound="' + x.id + '" aria-pressed="' + (m.sound === x.id) + '">' + x.label + "</button>").join("") +
+      '<button type="button" class="link-btn" data-h-mp-test>Listen</button></div>' +
+      '<span class="muted small">One bell to begin' + (m.interval ? ", one every " + m.interval + " min" : "") + ", three to end. Keep the screen on so the bells can ring.</span></div>" +
+      '<button type="button" class="btn-primary big-begin" data-h-mp-begin>Begin ' + m.minutes + " minutes</button>" +
+      '<p class="muted small soft-count">' + (done.length ? done.length + (done.length === 1 ? " sit" : " sits") + " · " + fmtMin(total) + " in stillness so far" : "Your first sit will be remembered here.") + "</p>" +
+      "</section>";
+  }
+
+  /* ---------- Yoga counter (in Move) ---------- */
+  function countYoga(video, title) {
+    S.yoga = S.yoga || [];
+    const today = dayKey(Date.now());
+    if (video && S.yoga.some((y) => y.video === video && dayKey(y.t) === today)) return false;
+    S.yoga.push({ id: uid(), t: Date.now(), video: video || "", title: title || "" });
+    save();
+    renderYoga();
+    return true;
+  }
+  function renderYoga() {
+    const el = $("#yogaCounter");
+    if (!el) return;
+    const all = S.yoga || [];
+    const week = all.filter((y) => y.t >= rangeStart("week")).length;
+    const month = all.filter((y) => y.t >= rangeStart("month")).length;
+    const dots = Array.from({ length: 7 }, (_, i) => {
+      const d0 = rangeStart("week") + i * 864e5;
+      const on = all.some((y) => y.t >= d0 && y.t < d0 + 864e5);
+      return '<span class="ydot' + (on ? " on" : "") + '" title="' + new Date(d0).toLocaleDateString(undefined, { weekday: "long" }) + '"></span>';
+    }).join("");
+    el.innerHTML =
+      '<div class="yoga-card"><div class="yoga-left">' + mascot(64, "awake") +
+      '<div><span class="eyebrow">Yoga counter</span><b class="yoga-big">' + all.length + (all.length === 1 ? " practice" : " practices") + "</b>" +
+      '<span class="muted small">' + week + " this week · " + month + " this month</span>" +
+      '<div class="ydots" aria-label="Days with yoga this week">' + dots + "</div></div></div>" +
+      '<div class="yoga-btns"><button type="button" class="btn-dark" data-h-yoga-plus>+1 I did yoga</button>' +
+      (all.length ? '<button type="button" class="link-btn" data-h-yoga-undo>Undo last</button>' : "") + "</div>" +
+      '<span class="muted small yoga-note">Yoga classes you play here count by themselves (once per class per day).</span></div>';
+  }
+  document.addEventListener("calm:play", function (e) {
+    const d = e.detail || {};
+    if (d.section === "yoga" && countYoga(d.id, d.title)) {
+      const n = (S.yoga || []).length;
+      toast("Counted in your yoga counter · " + n + (n === 1 ? " practice" : " practices"));
+    }
+  });
+
+  /* ---------- Compost: ideas rest here and the heap grows every 5 ---------- */
+  const PX = { s1: "#6B3A2E", s2: "#8A4E3A", s3: "#A9674C", g1: "#4E8F4E", g2: "#86C276", p1: "#E0458A", p2: "#F7A9C8", p3: "#FCE1EC",
+    d: "#8A2A45", f: "#F7C9AA", e: "#5A2638", w: "#E8A0A0", b: "#6F95E6", y: "#F2C94C", l: "#B9C7E8" };
+  function compostStage() { return Math.floor((S.compostAdded || 0) / 5); }
+  function pixelHeap(stage, scraps) {
+    const px = [];
+    const put = (x, y, c) => px.push([x, y, c]);
+    // soil mound (always)
+    for (let x = 2; x <= 21; x++) put(x, 19, "s1");
+    for (let x = 3; x <= 20; x++) put(x, 18, (x * 7) % 5 ? "s2" : "s1");
+    for (let x = 5; x <= 18; x++) put(x, 17, (x * 3) % 4 ? "s2" : "s3");
+    for (let x = 8; x <= 15; x++) put(x, 16, x % 3 ? "s3" : "s2");
+    // scraps: one bit of peel/leaf per idea since the last growth
+    const spots = [[6, 17, "y"], [16, 17, "g2"], [10, 16, "p2"], [13, 16, "w"], [4, 18, "l"]];
+    for (let i = 0; i < Math.min(scraps, 5); i++) put(spots[i][0], spots[i][1], spots[i][2]);
+    const st = Math.min(stage, 6);
+    if (stage >= 1) { put(18, 18, "w"); put(19, 18, "w"); put(20, 17, "w"); } // a little worm moved in
+    const plant = [];
+    const pp = (x, y, c) => plant.push([x, y, c]);
+    if (st >= 2) { for (let y = 13; y <= 15; y++) pp(11, y, "g1"); pp(10, 13, "g2"); pp(12, 13, "g2"); }
+    if (st >= 3) { for (let y = 10; y <= 12; y++) pp(11, y, "g1"); pp(9, 12, "g2"); pp(10, 12, "g2"); pp(12, 11, "g2"); pp(13, 11, "g2"); pp(13, 12, "g1"); }
+    if (st === 4) { pp(10, 8, "p2"); pp(11, 8, "p1"); pp(12, 8, "p2"); pp(11, 7, "p1"); pp(10, 9, "g2"); pp(12, 9, "g2"); pp(11, 9, "g1"); }
+    if (st >= 5) {
+      pp(11, 9, "g1");
+      const petals = [[11, 2], [10, 3], [11, 3], [12, 3], [7, 5], [8, 5], [8, 6], [14, 5], [15, 5], [14, 6], [8, 8], [9, 8], [13, 8], [14, 8],
+        [9, 4], [13, 4], [7, 6], [15, 6], [9, 9], [13, 9], [10, 9], [12, 9]];
+      petals.forEach(([x, y]) => pp(x, y, (x + y) % 3 ? "p1" : "p2"));
+      for (let x = 9; x <= 13; x++) for (let y = 4; y <= 8; y++) pp(x, y, st >= 6 ? "f" : ((x + y) % 2 ? "p2" : "p3"));
+      if (st >= 6) { pp(10, 6, "e"); pp(12, 6, "e"); pp(11, 7, "d"); pp(9, 7, "p2"); pp(13, 7, "p2"); }
+      else { pp(11, 6, "y"); pp(10, 6, "d"); pp(12, 5, "d"); }
+      [[8, 4], [14, 4], [7, 7], [15, 7]].forEach(([x, y]) => pp(x, y, "d"));
+    }
+    // a small garden grows beside it after that
+    const extra = Math.max(0, Math.min(stage - 6, 4));
+    const garden = [[3, 14], [19, 14], [5, 12], [17, 12]];
+    for (let i = 0; i < extra; i++) {
+      const [gx, gy] = garden[i];
+      for (let y = gy + 1; y <= 16; y++) put(gx, y, "g1");
+      put(gx - 1, gy, "p2"); put(gx + 1, gy, "p2"); put(gx, gy - 1, "p2"); put(gx, gy, "y");
+    }
+    const rect = ([x, y, c]) => '<rect x="' + x + '" y="' + y + '" width="1" height="1" fill="' + PX[c] + '"/>';
+    return '<svg class="heap" viewBox="0 0 24 21" shape-rendering="crispEdges" role="img" aria-label="My compost heap, stage ' + stage + '">' +
+      '<g class="heap-soil">' + px.map(rect).join("") + "</g>" +
+      '<g class="heap-plant">' + plant.map(rect).join("") + "</g></svg>";
+  }
+  const STAGE_NAMES = ["Fresh soil", "A worm moved in", "A sprout!", "Leaves", "A bud", "A lily", "A lily that's awake", "A little garden"];
+  function renderCompost() {
+    const el = $("#tab-compost");
+    const added = S.compostAdded || 0;
+    const stage = compostStage();
+    const toNext = 5 - (added % 5);
+    const resting = (S.compost || []).filter((c) => !c.done).slice().reverse();
+    const grew = (S.compost || []).filter((c) => c.done).slice().reverse();
+    el.innerHTML =
+      '<section class="block compost-page"><div class="block-head"><div><h1 class="page-title">Compost</h1>' +
+      '<span class="muted">Ideas I have but don\'t do yet. They rest here and feed the soil — nothing is wasted.</span></div></div>' +
+      '<div class="heap-wrap"><div class="heap-box">' + pixelHeap(stage, added % 5) + "</div>" +
+      '<div class="heap-info"><b class="heap-stage">' + esc(STAGE_NAMES[Math.min(stage, 7)]) + "</b>" +
+      '<span class="muted">' + (toNext === 5 && added ? "It just grew! " : "") + toNext + (toNext === 1 ? " more idea" : " more ideas") + " until it grows again</span>" +
+      '<div class="heap-bar" aria-hidden="true">' + Array.from({ length: 5 }, (_, i) => '<span class="' + (i < added % 5 ? "on" : "") + '"></span>').join("") + "</div></div></div>" +
+      '<form class="compost-add" data-h-compost-form><label class="sr-only" for="compostText">An idea for later</label>' +
+      '<input id="compostText" placeholder="An idea for something I could do…" maxlength="140" autocomplete="off"><button type="submit" class="btn-dark">Add to compost</button></form>' +
+      (resting.length ? '<h2 class="sub-h">Resting in the compost</h2><div class="compost-list">' + resting.map((c) =>
+        '<div class="compost-item"><span class="c-dot" aria-hidden="true"></span><div><b>' + esc(c.text) + '</b><span class="muted small">' +
+        new Date(c.t).toLocaleDateString(undefined, { day: "numeric", month: "short" }) + "</span></div>" +
+        '<button type="button" class="btn-soft" data-h-idea-try="' + esc(c.id) + '">Try it now</button>' +
+        '<button type="button" class="btn-soft" data-h-idea-done="' + esc(c.id) + '">I did it</button>' +
+        '<button type="button" class="icon-btn small" data-h-idea-del="' + esc(c.id) + '" aria-label="Remove idea"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>').join("") + "</div>"
+        : '<p class="empty">Nothing resting yet. When an idea pops up and you can\'t do it now, drop it here.</p>') +
+      (grew.length ? '<h2 class="sub-h">Grew into something</h2><div class="compost-list grew">' + grew.slice(0, 20).map((c) =>
+        '<div class="compost-item"><span class="c-dot on" aria-hidden="true"></span><div><b>' + esc(c.text) + '</b><span class="muted small">did it ' +
+        new Date(c.done).toLocaleDateString(undefined, { day: "numeric", month: "short" }) + "</span></div></div>").join("") + "</div>" : "") +
+      "</section>";
+  }
+
+  /* ---------- Sounds tab extras: calm noise + Spotify ---------- */
+  function parseSpotify(url) {
+    const s2 = (url || "").trim();
+    let m = s2.match(/open\.spotify\.com\/(?:intl-[a-z]{2}(?:-[A-Za-z]{2})?\/)?(?:embed\/)?(playlist|album|track|artist|episode|show)\/([A-Za-z0-9]{10,40})/);
+    if (!m) m = s2.match(/^spotify:(playlist|album|track|artist|episode|show):([A-Za-z0-9]{10,40})$/);
+    return m ? { type: m[1], sid: m[2] } : null;
+  }
+  function renderSoundsExtras() {
+    const el = $("#spotifyBox");
+    if (!el) return;
+    const list = S.spotify || [];
+    el.innerHTML =
+      '<section class="block"><div class="block-head"><h2>Calm noise</h2><span class="muted small">a soft breeze made inside the app — works offline</span></div>' +
+      '<div class="noise-row"><button type="button" class="btn-soft" data-h-noise aria-pressed="' + !!(S.noise && S.noise.on) + '">' + (S.noise && S.noise.on ? "On" : "Off") + "</button>" +
+      '<label class="vol">Volume <input type="range" id="noiseVol" min="0" max="60" value="' + Math.round(((S.noise && S.noise.vol) || 0.18) * 100) + '"></label></div>' +
+      '<p class="muted small">It pauses by itself while other music plays, and comes back after.</p></section>' +
+      '<section class="block"><div class="block-head"><h2>Spotify</h2><span class="muted small">paste a playlist, album or song link from the Spotify app (Share → Copy link)</span></div>' +
+      '<form class="compost-add" data-h-spotify-form><label class="sr-only" for="spotifyUrl">Spotify link</label>' +
+      '<input id="spotifyUrl" placeholder="https://open.spotify.com/playlist/…" autocomplete="off"><button type="submit" class="btn-dark">Add</button></form>' +
+      (list.length ? '<div class="spotify-list">' + list.map((x) =>
+        '<div class="spotify-item"><iframe title="Spotify ' + esc(x.type) + '" src="https://open.spotify.com/embed/' + esc(x.type) + "/" + esc(x.sid) +
+        '?utm_source=generator" width="100%" height="' + (x.type === "track" || x.type === "episode" ? 152 : 352) + '" frameborder="0" loading="lazy" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"></iframe>' +
+        '<button type="button" class="link-btn" data-h-spotify-del="' + esc(x.id) + '">Remove</button></div>').join("") + "</div>"
+        : '<p class="empty">No Spotify links yet. Log in to Spotify in this browser to hear full songs instead of 30-second previews.</p>') +
+      "</section>";
+    const v = $("#noiseVol");
+    if (v) v.addEventListener("input", function () { S.noise = S.noise || {}; S.noise.vol = Number(this.value) / 100; save(); noiseLevel(); });
+  }
+
+  /* ---------- Calm noise: soft brown noise with a slow "breeze" ---------- */
+  let noise = null;
+  function startNoise() {
+    const ac = audio();
+    if (!ac || noise) { noiseLevel(); return; }
+    const len = ac.sampleRate * 4;
+    const buf = ac.createBuffer(2, len, ac.sampleRate);
+    for (let c = 0; c < 2; c++) {
+      const d = buf.getChannelData(c);
+      let last = 0;
+      for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.2; }
+      // smooth the loop seam
+      for (let i = 0; i < 2000; i++) { const k = i / 2000; d[i] = d[i] * k + d[len - 2000 + i] * (1 - k); }
+    }
+    const src = ac.createBufferSource(); src.buffer = buf; src.loop = true;
+    const lp = ac.createBiquadFilter(); lp.type = "lowpass"; lp.frequency.value = 520; lp.Q.value = 0.4;
+    const lfo = ac.createOscillator(); lfo.frequency.value = 0.06;
+    const lfoGain = ac.createGain(); lfoGain.gain.value = 180;
+    lfo.connect(lfoGain); lfoGain.connect(lp.frequency);
+    const g = ac.createGain(); g.gain.value = 0;
+    src.connect(lp); lp.connect(g); g.connect(ac.destination);
+    src.start(); lfo.start();
+    noise = { g, ac };
+    noiseLevel();
+  }
+  function noiseLevel() {
+    if (!noise) return;
+    const otherPlaying = window.CalmPlayer && window.CalmPlayer.currentSound && window.CalmPlayer.currentSound();
+    const target = S.noise && S.noise.on && !otherPlaying ? (S.noise.vol || 0.18) : 0;
+    noise.g.gain.setTargetAtTime(target, noise.ac.currentTime, 0.8);
+  }
+  setInterval(noiseLevel, 2000);
+
+  /* ---------- Welcome: a sentence to enter the playground ---------- */
+  function showSplash() {
+    const sp = $("#splash");
+    if (!sp) return;
+    const q = QUOTES[0];
+    sp.innerHTML = '<div class="splash-inner">' + mascot(150, "sleepy") +
+      '<p class="splash-q">“' + esc(q.q) + "”</p><p class=\"splash-by\">— " + esc(q.by) + "</p>" +
+      '<p class="splash-sub">Play in this world like a child. That\'s the whole game.</p>' +
+      '<button type="button" class="btn-primary soft" id="splashGo">Enter the playground</button>' +
+      '<button type="button" class="link-btn" id="splashQuiet">Enter quietly (no calm noise)</button></div>';
+    sp.hidden = false;
+    document.body.classList.add("splash-open");
+    const go = (quiet) => {
+      sp.classList.add("leaving");
+      document.body.classList.remove("splash-open");
+      setTimeout(() => { sp.hidden = true; sp.classList.remove("leaving"); }, 450);
+      if (quiet) { S.noise = S.noise || {}; S.noise.on = false; save(); }
+      if (S.noise && S.noise.on) startNoise();
+    };
+    $("#splashGo").addEventListener("click", () => go(false));
+    $("#splashQuiet").addEventListener("click", () => go(true));
+    $("#splashGo").focus();
   }
 
   /* ------------------------------------------------------------------ */
@@ -842,6 +1195,31 @@
     const d = b.dataset;
 
     if (d.hUrge !== undefined) { startCheckIn(""); return; }
+    if (d.hMoment !== undefined) { openMoment(); return; }
+    if (d.hMMin !== undefined) { momentDraft.minutes = Number(d.hMMin); renderMoment(); return; }
+    if (d.hPickMfeel) { toggle(momentDraft.feelings, d.hPickMfeel); renderMoment(); return; }
+    if (d.hMSave !== undefined) { saveMoment(); return; }
+    if (d.hTwo) { quickStart(d.hTwo, 2); return; }
+    if (d.hSkip !== undefined) {
+      if (!draft.passion) { toast("Pick what you'd like to do first"); $("#hPassion").focus(); return; }
+      draft.skipped = true; draft.reasons = []; draft.feelings = []; begin(); return;
+    }
+    if (d.hGentle !== undefined) { S.gentle = !S.gentle; save(); renderToday(); document.body.classList.toggle("gentle", S.gentle); return; }
+    if (d.hMpMin) { S.medMinutes = Number(d.hMpMin); save(); renderMeditate(); return; }
+    if (d.hMpInt !== undefined) { S.medInterval = Number(d.hMpInt); save(); renderMeditate(); return; }
+    if (d.hMpSound) { S.medSound = d.hMpSound; save(); ringBell(d.hMpSound, 1); renderMeditate(); return; }
+    if (d.hMpTest !== undefined) { ringBell(S.medSound || "bowl", 1); return; }
+    if (d.hMpBegin !== undefined) {
+      quickStart("meditation", S.medMinutes || 10, { interval: S.medInterval != null ? S.medInterval : 5, sound: S.medSound || "bowl" });
+      return;
+    }
+    if (d.hYogaPlus !== undefined) { countYoga("", ""); toast("Yoga counted. Lovely."); return; }
+    if (d.hYogaUndo !== undefined) { const y = (S.yoga || []).pop(); if (y) forget(y.id); save(); renderYoga(); return; }
+    if (d.hIdeaTry) { startCheckIn("idea:" + d.hIdeaTry); return; }
+    if (d.hIdeaDone) { const c = S.compost.find((x) => x.id === d.hIdeaDone); if (c) { c.done = Date.now(); save(); renderCompost(); toast("It grew into something real"); } return; }
+    if (d.hIdeaDel) { if (confirm("Remove this idea? It stays in the soil — the heap won't shrink.")) { S.compost = S.compost.filter((x) => x.id !== d.hIdeaDel); forget(d.hIdeaDel); save(); renderCompost(); } return; }
+    if (d.hNoise !== undefined) { S.noise = S.noise || {}; S.noise.on = !S.noise.on; save(); if (S.noise.on) startNoise(); noiseLevel(); renderSoundsExtras(); updateNoiseBtn(); return; }
+    if (d.hSpotifyDel) { S.spotify = (S.spotify || []).filter((x) => x.id !== d.hSpotifyDel); forget(d.hSpotifyDel); save(); renderSoundsExtras(); return; }
     if (d.hResume !== undefined) { openFlow(); renderDoing(); return; }
     if (d.hPick !== undefined) {
       const sug = suggestFor([], S.energy);
@@ -963,6 +1341,29 @@
 
   document.addEventListener("submit", function (e) {
     const f = e.target;
+    if (f.dataset.hCompostForm !== undefined) {
+      e.preventDefault();
+      const v = $("#compostText").value.trim();
+      if (!v) return;
+      const before = compostStage();
+      S.compost = (S.compost || []).concat({ id: uid(), text: v.slice(0, 140), t: Date.now() });
+      S.compostAdded = (S.compostAdded || 0) + 1;
+      save();
+      renderCompost();
+      if (compostStage() > before) { toast("Your compost grew: " + STAGE_NAMES[Math.min(compostStage(), 7)].toLowerCase()); $(".heap-box").classList.add("grew"); }
+      else toast("Resting in the compost");
+      $("#compostText").focus();
+      return;
+    }
+    if (f.dataset.hSpotifyForm !== undefined) {
+      e.preventDefault();
+      const r = parseSpotify($("#spotifyUrl").value);
+      if (!r) { toast("That doesn't look like a Spotify link"); return; }
+      if ((S.spotify || []).some((x) => x.sid === r.sid)) { toast("Already here"); return; }
+      S.spotify = (S.spotify || []).concat({ id: uid(), type: r.type, sid: r.sid });
+      save(); renderSoundsExtras(); toast("Added from Spotify");
+      return;
+    }
     if (f.dataset.hParkForm !== undefined) {
       e.preventDefault();
       const v = $("#hPark").value.trim();
@@ -993,11 +1394,31 @@
 
   window.addEventListener("hashchange", route);
 
+  function updateNoiseBtn() {
+    const b = $("#noiseBtn");
+    if (!b) return;
+    const on = !!(S.noise && S.noise.on);
+    b.setAttribute("aria-pressed", String(on));
+    b.setAttribute("aria-label", on ? "Calm noise is on — turn off" : "Calm noise is off — turn on");
+    b.classList.toggle("on", on);
+  }
+  document.addEventListener("click", function (e) {
+    if (e.target.closest("#noiseBtn")) {
+      S.noise = S.noise || {}; S.noise.on = !S.noise.on; save();
+      if (S.noise.on) startNoise();
+      noiseLevel(); updateNoiseBtn();
+      toast(S.noise.on ? "Calm noise on" : "Calm noise off");
+    }
+  });
+
   /* ------------------------------------------------------------------ */
   /* Boot                                                                */
   /* ------------------------------------------------------------------ */
 
   route();
+  updateNoiseBtn();
+  document.body.classList.toggle("gentle", !!S.gentle);
+  showSplash();
   if (S.active) {
     const a = S.active;
     const p = passionById(a.passion);

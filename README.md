@@ -1,19 +1,19 @@
-# My Hangout
+# Playground
 
-A calm place to go instead of scrolling: my passions, a before → during → after session tracker, a journal that shows what really lifts my mood, the people who inspire me, a spell book, and all my movement classes, background sounds and offline files.
+A calm, childlike watercolour playground to go to instead of scrolling. The game is simple: play, live and be curious. It helps me do things I enjoy, notice the random good things I already do, spend time with myself, and keep ideas for later.
 
-Plain HTML, CSS and JavaScript. There's no build step and nothing to install. Live at https://julielebreton222.github.io/calm-player/
+Plain HTML, CSS and JavaScript — no build step. Live at https://julielebreton222.github.io/calm-player/ · made for iPhone (bottom tab bar, safe areas, add to Home Screen) and Mac.
 
-## Tabs
+## Places
 
-- **Today:** "I feel the urge to scroll" button, this week's stats (time on passions, urges turned into something else, average mood lift, streak), My people, suggestions for how I feel right now, and recent sessions.
-- **Passions:** 16 passions, each with tiny first steps — drawing, listening to music, making playlists, dancing, fairytales, learning about yoga, playing with dolls, making a song, meditation, morning pages, journaling, singing/humming/chanting, talking to myself out loud, nature with no phone, creating a magic spell, and a curiosity of the week. Add my own, plus **Things I tend to avoid** (work, emails…) for 10 brave minutes when scrolling is really avoiding.
-- **Meditation:** 5–60 min timer with a Tibetan singing bowl, deep bowl or small bell at the start, at intervals (1/2/5/10 min) and three at the end. The sounds are generated in the browser, so they work offline.
-- **Session flow:** before (what pulled me here, the thought word for word, feelings, mood 1–10) → doing (timer, prompt, a reminder from my people, sound underneath, a place to park urges, pages/notes) → after (feelings, mood, lift, one line). Survives a reload.
-- **Move:** the Calm Player — yoga, calisthenics, flexibility, Pilates, dance, soundscapes, playlists, yoga path, ladders.
-- **Sounds & files:** my YouTube background playlist and My files (offline).
-- **Journal:** minutes per day, what lifts me most, what pulls me toward scrolling, thoughts that come back, patterns, every session.
-- **Spell book:** 12 original spells plus my own.
+- **Welcome:** opens with “In the true man there is a child hidden — it wants to play.” (Nietzsche, *Thus Spoke Zarathustra*, Thomas Common's public-domain translation) and starts the calm noise.
+- **Playground (home):** I want to scroll… · I just did something · Pick one for me · tiles to every place · My people · this week, gently · gentle mode to hide all numbers.
+- **Things I love:** tiny things (2–5 min) and cozy things, each with tiny prompts. **Just 2 min** skips the questions. Things I tend to avoid, for 10 brave minutes.
+- **Compost:** drop ideas you can't do yet. An 8-bit heap grows every 5 ideas (worm → sprout → leaves → bud → lily → awake lily → garden). Try an idea later, or mark “I did it”.
+- **Meditate:** 5–60 min, interval bells, Tibetan singing bowl / deep bowl / small bell (generated in the browser, works offline).
+- **Move:** yoga counter (+1, and yoga classes played here count by themselves), plus all the classes, playlists, yoga path and ladders.
+- **Sounds:** calm noise (soft breeze, pauses while other music plays), Spotify playlists/albums/songs, my YouTube background playlist, and My files (offline).
+- **Journal & Spell book:** every session and moment, patterns, and 12 original spells plus my own.
 
 ## Sync across devices
 

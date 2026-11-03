@@ -65,7 +65,7 @@
   // Combine two copies so nothing is ever lost: the newer copy wins for settings, while journal
   // sessions, spells, my passions and things I avoid are combined entry by entry. Deletions are
   // remembered ("deleted" list) so a deleted entry never comes back.
-  const LIST_FIELDS = ["sessions", "spells", "customPassions", "tasks", "people"];
+  const LIST_FIELDS = ["sessions", "spells", "customPassions", "tasks", "people", "compost", "yoga", "spotify"];
   function merge(newer, older) {
     const out = JSON.parse(JSON.stringify(newer));
     out.stores = out.stores || {};
@@ -81,6 +81,8 @@
         a[field] = list.filter((x) => !(x && del.has(x.id)));
       });
       if (a.sessions) a.sessions.sort((x, y) => x.start - y.start);
+      if (a.yoga) a.yoga.sort((x, y) => x.t - y.t);
+      a.compostAdded = Math.max(a.compostAdded || 0, b.compostAdded || 0, (a.compost || []).length);
     } else if (!a && b) {
       out.stores["my-hangout-v1"] = b;
     }

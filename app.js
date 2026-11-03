@@ -224,6 +224,8 @@
   }
 
   function playMain(id) {
+    const vv = videoById(id);
+    if (vv) document.dispatchEvent(new CustomEvent("calm:play", { detail: { id: id, section: vv.section, title: vv.title } }));
     const frame = $("#frame");
     hideFrameMsg();
     frame.classList.add("playing");
