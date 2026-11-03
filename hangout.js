@@ -242,6 +242,7 @@
   function tasks() { return (S.tasks || []).map(taskAsPassion); }
   function ideaAsPassion(c) { return { id: "idea:" + c.id, name: c.text, color: "#C9D9C0", idea: true, energy: [], prompts: ["Start with the very first tiny bit of it. That's enough."] }; }
   function passionById(id) {
+    if (id && id.startsWith("breath:")) { const x = pranaById(id.slice(7)); return x ? { id, name: x.name, color: "#B9C7E8", breath: true, prompts: [] } : null; }
     if (id && id.startsWith("idea:")) { const c = (S.compost || []).find((x) => "idea:" + x.id === id); return c ? ideaAsPassion(c) : null; }
     return PASSIONS.concat(S.customPassions, tasks()).find((p) => p.id === id) || null;
   }
@@ -328,7 +329,7 @@
   /* Tabs & routing                                                      */
   /* ------------------------------------------------------------------ */
 
-  const TABS = ["today", "passions", "meditate", "spells", "move", "sounds", "keep"];
+  const TABS = ["today", "breathe", "passions", "meditate", "spells", "move", "sounds", "keep"];
   const NAV_OF = { meditate: "passions", spells: "passions" };
   function showTab(id, scrollTarget) {
     if (id === "compost" || id === "journal") { S.keepView = id; id = "keep"; }
@@ -344,7 +345,7 @@
     else window.scrollTo({ top: 0 });
   }
   function route() {
-    if (!$("#flow").hidden) { $("#flow").hidden = true; document.body.classList.remove("flow-open"); clearInterval(tick); tick = null; }
+    if (!$("#flow").hidden) { stopBreathEngine(); $("#flow").hidden = true; document.body.classList.remove("flow-open"); clearInterval(tick); tick = null; }
     const h = decodeURIComponent(location.hash || "");
     if (h.startsWith("#/")) { showTab(h.slice(2) === "playground" ? "today" : h.slice(2)); return; }
     if (h.length > 1) {
@@ -364,6 +365,7 @@
     document.body.classList.toggle("gentle", !!S.gentle);
     if (id === "today") renderToday();
     if (id === "keep") renderKeep();
+    if (id === "breathe") renderBreathe();
     if (id === "meditate") renderMeditate();
     if (id === "move") renderMoveTop();
     if (id === "sounds") renderSoundsExtras();
@@ -873,6 +875,265 @@
     toast("Saved · " + fmtMin(mins) + (lift(l) != null ? " · mood " + signed(lift(l)) : ""));
   }
 
+  /* ================================================================== */
+  /* Breathe — pranayamas, suggested from how I feel / what I want       */
+  /* Written in my own words from the classic Hatha texts (Hatha Yoga     */
+  /* Pradipika, Gheranda Samhita) and modern teachers (B. K. S. Iyengar's */
+  /* Light on Pranayama). Traditional claims are labelled as tradition.   */
+  /* ================================================================== */
+
+  const BREATH_FEELINGS = [
+    { id: "anxious", label: "Anxious" }, { id: "overwhelmed", label: "Overwhelmed" }, { id: "restless", label: "Restless" },
+    { id: "hot", label: "Angry or hot" }, { id: "sleep", label: "Can't sleep" }, { id: "tired", label: "Tired, sluggish" },
+    { id: "foggy", label: "Foggy" }, { id: "scattered", label: "Scattered" }, { id: "low", label: "Low" }, { id: "shallow", label: "Breathing shallow" },
+  ];
+  const BREATH_WANTS = [
+    { id: "calm", label: "Calm" }, { id: "energy", label: "Energy" }, { id: "focus", label: "Focus" },
+    { id: "cool", label: "Cool down" }, { id: "rest", label: "Rest / sleep" }, { id: "ground", label: "Feel grounded" },
+  ];
+  const ENERGISING_CAUTION = "Skip this one if you're pregnant, or have high blood pressure, a heart condition, epilepsy, glaucoma, a hernia, recent surgery, or panic attacks. Not on a full stomach or right before sleep. Stop if you feel dizzy.";
+  const HOLD_CAUTION = "The holds are gentle and optional — just breathe through them if you're pregnant, have high blood pressure, or they make you uneasy.";
+
+  // step: { k: "in"|"hold"|"out"|"pump"|"rest", s: seconds, say: cue }
+  const PRANAYAMAS = [
+    { id: "nadi", name: "Nadi Shodhana", en: "Alternate nostril breathing", group: "Calm", good: ["anxious", "overwhelmed", "restless", "scattered", "calm", "focus", "rest", "ground"],
+      rounds: 9, steps: [{ k: "in", s: 4, say: "In through the left" }, { k: "out", s: 6, say: "Out through the right" }, { k: "in", s: 4, say: "In through the right" }, { k: "out", s: 6, say: "Out through the left" }],
+      how: ["Sit tall. Rest your right thumb by the right nostril and your ring finger by the left.", "Close the right side, breathe in through the left.", "Close the left, breathe out through the right — then in through the right.", "Switch, and breathe out through the left. That's one round."],
+      what: "A slow, even, side-to-side breath that most people find settling within a few rounds. Tradition says it balances the body's two main energy channels (ida and pingala). Small studies suggest slow alternate-nostril breathing can lower heart rate and feelings of anxiety — the long, unhurried exhale is likely doing a lot of the work.",
+      source: "Described in the Hatha Yoga Pradipika (15th century, chapter 2) as the practice that purifies the energy channels — “nadi shodhana” means “cleaning the channels” — and taught as preparation for every other pranayama.",
+      caution: "If one side is blocked, just imagine the breath moving through it. Never strain." },
+    { id: "bhramari", name: "Bhramari", en: "Bee breath", group: "Calm", good: ["anxious", "overwhelmed", "restless", "hot", "sleep", "calm", "rest"],
+      rounds: 7, steps: [{ k: "in", s: 4, say: "Breathe in through the nose" }, { k: "out", s: 8, say: "Hum out like a bee — mmmm" }],
+      how: ["Sit comfortably, lips closed, jaw soft.", "Optionally rest your thumbs gently on the little flaps in front of your ears and your fingers over your closed eyes.", "Breathe in through the nose.", "Breathe out slowly making a low, steady humming sound. Feel it buzz in your face and head."],
+      what: "The hum makes the exhale long and slow, which is one of the most reliable ways to calm the nervous system. Humming also greatly increases nitric oxide in the nose (shown in research by Weitzberg and Lundberg). Many people use it to quiet a busy mind or to wind down at night.",
+      source: "One of the eight classical breath practices (kumbhakas) in the Hatha Yoga Pradipika, which compares the in-breath to a male bee and the out-breath to a female bee; also taught in the Gheranda Samhita.",
+      caution: "Keep the sound soft. Don't press hard on your ears or eyes. Fine for almost everyone." },
+    { id: "chandra", name: "Chandra Bhedana", en: "Left-nostril, moon breath", group: "Cooling", good: ["hot", "overwhelmed", "sleep", "restless", "cool", "calm", "rest"],
+      rounds: 12, steps: [{ k: "in", s: 4, say: "In through the left nostril" }, { k: "out", s: 6, say: "Out through the right" }],
+      how: ["Close the right nostril with your thumb.", "Breathe in slowly through the left.", "Close the left with your ring finger, open the right, and breathe out through the right.", "Every in-breath is through the left."],
+      what: "Tradition links the left nostril with the cooling, “lunar” channel (ida), so this is used to cool down, soften emotional heat and prepare for rest. Small studies suggest left-nostril breathing may slightly lower heart rate and blood pressure, though the evidence is limited.",
+      source: "The counterpart of Surya Bhedana (which the Hatha Yoga Pradipika describes); taught in modern Hatha yoga, including B. K. S. Iyengar's Light on Pranayama.",
+      caution: "Avoid if you feel cold, very low, or heavy already. Keep it gentle." },
+    { id: "surya", name: "Surya Bhedana", en: "Right-nostril, sun breath", group: "Energy", good: ["tired", "foggy", "low", "energy", "focus"],
+      rounds: 12, steps: [{ k: "in", s: 4, say: "In through the right nostril" }, { k: "out", s: 6, say: "Out through the left" }],
+      how: ["Close the left nostril with your ring finger.", "Breathe in slowly through the right.", "Close the right with your thumb and breathe out through the left.", "Every in-breath is through the right."],
+      what: "Tradition links the right nostril with the warming, “solar” channel (pingala), so this is used to wake up, lift heaviness and kindle digestion. It's a gentle way to feel more alert without fast breathing.",
+      source: "The first of the eight kumbhakas in the Hatha Yoga Pradipika (chapter 2) and also described in the Gheranda Samhita.",
+      caution: "Skip if you have high blood pressure or a heart condition, or in the evening if you want to sleep." },
+    { id: "bhastrika", name: "Bhastrika", en: "Bellows breath", group: "Energy", good: ["tired", "foggy", "low", "energy"],
+      rounds: 3, pump: { n: 15, s: 1.2, rest: 30 },
+      how: ["Sit tall with a straight back.", "Breathe in and out through the nose, both strongly and evenly, like a bellows — about one breath a second.", "After 15 breaths, stop and breathe normally for half a minute.", "Repeat for three rounds. Go slower if it feels like too much."],
+      what: "Fast, full, forceful breaths in and out create warmth and a strong wake-up feeling. It is stimulating — heart rate and alertness go up — so it's for sluggish moments, not anxious ones.",
+      source: "One of the eight kumbhakas in the Hatha Yoga Pradipika, which describes the breath moving “like a blacksmith's bellows”; also in the Gheranda Samhita.",
+      caution: ENERGISING_CAUTION },
+    { id: "kapalabhati", name: "Kapalabhati", en: "Skull-shining breath", group: "Energy", good: ["tired", "foggy", "energy", "focus"],
+      rounds: 3, pump: { n: 30, s: 1, rest: 30 },
+      how: ["Sit tall, hands on knees.", "Breathe out sharply through the nose by snapping your belly in. Let the in-breath happen by itself.", "About one sharp exhale a second, for 30.", "Then rest with normal breaths for half a minute. Three rounds."],
+      what: "Short active exhales and passive inhales. Breathing out quickly lowers carbon dioxide in the blood a little, which is part of why it feels clearing and energising. Often used to shake off fog.",
+      source: "Not a breath-retention practice in the old texts but one of the six cleansing actions (shatkarmas) in the Hatha Yoga Pradipika (chapter 2); also in the Gheranda Samhita.",
+      caution: ENERGISING_CAUTION + " Also skip during your period if it feels uncomfortable." },
+    { id: "ujjayi", name: "Ujjayi", en: "Victorious, ocean breath", group: "Focus", good: ["scattered", "restless", "anxious", "focus", "ground", "calm"],
+      rounds: 12, steps: [{ k: "in", s: 5, say: "In, with a soft ocean sound" }, { k: "out", s: 7, say: "Out, with the same soft sound" }],
+      how: ["Breathe through the nose.", "Gently narrow the back of your throat, as if fogging a mirror with your mouth closed.", "You'll hear a soft ocean sound on the in- and out-breath.", "Keep it quiet and even — the sound is your anchor."],
+      what: "The sound gives the mind something steady to follow, and the slight narrowing slows the breath. It's the breath often used during yoga flows to stay focused and warm.",
+      source: "One of the eight kumbhakas in the Hatha Yoga Pradipika (chapter 2) and in the Gheranda Samhita; central in many modern styles and in Iyengar's Light on Pranayama.",
+      caution: "Keep the throat soft — it should never feel tight." },
+    { id: "viloma", name: "Viloma", en: "Interrupted breath", group: "Focus", good: ["scattered", "focus", "shallow", "low"],
+      rounds: 6, steps: [{ k: "in", s: 2, say: "In a little" }, { k: "hold", s: 2, say: "Pause" }, { k: "in", s: 2, say: "In a little more" }, { k: "hold", s: 2, say: "Pause" }, { k: "in", s: 2, say: "Fill to the top" }, { k: "out", s: 8, say: "Long, slow breath out" }],
+      how: ["Sit or lie down.", "Breathe in a third of the way, pause; another third, pause; then fill up.", "Breathe out slowly and smoothly all the way.", "Later you can try the opposite: a smooth in-breath and a stepped out-breath."],
+      what: "Breaking the breath into steps asks for attention, which helps a scattered mind settle, and gently trains you to use more of your lungs.",
+      source: "“Viloma” means “against the grain”. It's taught in detail in B. K. S. Iyengar's Light on Pranayama.",
+      caution: HOLD_CAUTION },
+    { id: "dirgha", name: "Dirgha", en: "Complete yogic breath (three-part)", group: "Focus", good: ["shallow", "anxious", "overwhelmed", "ground", "calm", "rest"],
+      rounds: 8, steps: [{ k: "in", s: 2, say: "Belly fills" }, { k: "in", s: 2, say: "Ribs widen" }, { k: "in", s: 2, say: "Chest and collarbones rise" }, { k: "out", s: 8, say: "Empty from top to belly" }],
+      how: ["Sit or lie down, one hand on the belly, one on the chest.", "Breathe in to the belly, then the ribs, then up to the chest and collarbones.", "Breathe out in reverse, letting the belly fall last.", "Keep it smooth — a wave, not three jumps."],
+      what: "Combines belly, rib and upper-chest (clavicular) breathing into one full, slow breath. It's a gentle way to undo shallow, chest-only breathing and slow everything down.",
+      source: "A modern teaching drawn from the older practices; popularised by teachers such as Swami Sivananda and in many yoga lineages today.",
+      caution: "Fine for almost everyone. Don't force the last part of the in-breath." },
+    { id: "sitali", name: "Sitali", en: "Cooling breath", group: "Cooling", good: ["hot", "restless", "cool"],
+      rounds: 10, steps: [{ k: "in", s: 4, say: "In through the curled tongue" }, { k: "out", s: 6, say: "Out through the nose" }],
+      how: ["Curl your tongue into a tube and let it peek out between your lips.", "Breathe in through it — the air feels cool.", "Close your mouth and breathe out through the nose.", "Can't curl your tongue? Breathe in through your teeth instead (that's Sitkari)."],
+      what: "The in-breath passes over the wet tongue and feels cool. Used when you're overheated — in body, temper or mood.",
+      source: "One of the eight kumbhakas in the Hatha Yoga Pradipika (chapter 2) and in the Gheranda Samhita.",
+      caution: "Skip in very cold weather or if you have low blood pressure or a cold." },
+    { id: "sama", name: "Sama Vritti", en: "Equal (box) breathing", group: "Calm", good: ["anxious", "scattered", "overwhelmed", "focus", "calm", "rest"],
+      rounds: 6, steps: [{ k: "in", s: 4, say: "Breathe in" }, { k: "hold", s: 4, say: "Hold" }, { k: "out", s: 4, say: "Breathe out" }, { k: "hold", s: 4, say: "Hold" }],
+      how: ["Breathe in for four, hold for four, out for four, hold for four.", "Keep the holds soft — no gripping in the throat.", "If four is too long, use three."],
+      what: "Equal, steady counts give the mind a simple job and slow the breath down. A favourite for anxious or busy moments.",
+      source: "“Sama vritti” (equal movement) is described in Iyengar's Light on Pranayama; the four-part box version is widely taught today.",
+      caution: HOLD_CAUTION },
+  ];
+  function pranaById(id) { return PRANAYAMAS.find((x) => x.id === id) || null; }
+
+  let breathEngine = null;
+  function stopBreathEngine() { if (breathEngine) { clearTimeout(breathEngine.t); breathEngine = null; } }
+
+  function renderBreathe() {
+    const el = $("#tab-breathe");
+    const sel = S.breathSel || [];
+    const groups = ["Calm", "Cooling", "Energy", "Focus"];
+    el.innerHTML = '<section class="block calm-page"><h1 class="page-title">Breathe</h1>' +
+      '<p class="muted">How are you, and what would you like? Pick as many as fit.</p>' +
+      '<div class="field"><span class="field-label">I feel</span><div class="chip-row">' + BREATH_FEELINGS.map((f) =>
+        '<button type="button" class="chip" data-h-bsel="' + f.id + '" aria-pressed="' + sel.includes(f.id) + '">' + esc(f.label) + "</button>").join("") + "</div></div>" +
+      '<div class="field"><span class="field-label">I want</span><div class="chip-row">' + BREATH_WANTS.map((f) =>
+        '<button type="button" class="chip sage" data-h-bsel="' + f.id + '" aria-pressed="' + sel.includes(f.id) + '">' + esc(f.label) + "</button>").join("") + "</div></div>" +
+      '<button type="button" class="btn-primary" data-h-bsuggest>Suggest a breath for me</button>' +
+      '<h2 class="sub-h">All the breaths</h2>' +
+      groups.map((g) => '<div class="day"><span class="day-name">' + g + '</span><div class="rows">' +
+        PRANAYAMAS.filter((x) => x.group === g).map((x) =>
+          '<button type="button" class="row row-btn" data-h-bopen="' + x.id + '"><span class="row-main"><b>' + esc(x.name) + "</b><span>" + esc(x.en) + "</span></span>" + CHEV + "</button>").join("") +
+        "</div></div>").join("") +
+      '<p class="muted small">Breathe gently, never force. If you feel dizzy, light-headed or anxious, stop and breathe normally. Not a substitute for medical advice.</p></section>';
+  }
+
+  function suggestBreath() {
+    const sel = S.breathSel || [];
+    let pool = PRANAYAMAS.map((x) => ({ x, w: sel.length ? x.good.filter((g) => sel.includes(g)).length : 1 }));
+    const wantsCalm = sel.some((g) => ["anxious", "overwhelmed", "restless", "sleep", "hot", "calm", "rest", "cool"].includes(g));
+    const wantsEnergy = sel.some((g) => ["tired", "foggy", "energy"].includes(g));
+    // never offer fast breathing to someone anxious or wanting rest, unless they also asked for energy
+    if (wantsCalm && !wantsEnergy) pool = pool.filter((p) => !["bhastrika", "kapalabhati", "surya"].includes(p.x.id));
+    const matched = pool.filter((p) => p.w > 0);
+    const list = matched.length ? matched : pool;
+    // mostly the best matches, sometimes a gentle surprise from the rest
+    const total = list.reduce((n, p) => n + p.w * p.w + 0.3, 0);
+    let r = Math.random() * total;
+    for (const p of list) { r -= p.w * p.w + 0.3; if (r <= 0) return p.x.id; }
+    return list[0].x.id;
+  }
+
+  function readMore(x) {
+    return '<details class="read-more"><summary>Read about it</summary>' +
+      "<p><b>What it does.</b> " + esc(x.what) + "</p>" +
+      "<p><b>Where it comes from.</b> " + esc(x.source) + "</p>" +
+      "<p><b>Take care.</b> " + esc(x.caution) + "</p></details>";
+  }
+
+  function openPranayama(id, suggested) {
+    const x = pranaById(id);
+    if (!x) return;
+    stopBreathEngine();
+    const rounds = (S.breathRounds && S.breathRounds[id]) || x.rounds;
+    openFlow();
+    $("#flowInner").innerHTML =
+      '<div class="flow-top"><span class="eyebrow">' + (suggested ? "A breath for you" : esc(x.group)) + "</span>" +
+      '<button type="button" class="icon-btn" data-h-bclose aria-label="Close"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      '<h2 id="flowTitle" class="flow-h">' + esc(x.name) + '</h2><p class="muted" style="margin-top:-8px">' + esc(x.en) + "</p>" +
+      '<ol class="how">' + x.how.map((h) => "<li>" + esc(h) + "</li>").join("") + "</ol>" +
+      (x.pump ? '<p class="caution">' + esc(x.caution) + "</p>" : "") +
+      '<div class="stepper small"><button type="button" class="round-btn" data-h-bround="-1" aria-label="Fewer rounds">−</button>' +
+      '<span><b class="rounds-num">' + rounds + "</b> rounds</span>" +
+      '<button type="button" class="round-btn" data-h-bround="1" aria-label="More rounds">+</button></div>' +
+      '<button type="button" class="btn-primary" data-h-bbegin="' + x.id + '">Begin</button>' +
+      (suggested ? '<button type="button" class="link-btn center" data-h-bsuggest>Suggest another</button>' : "") +
+      readMore(x);
+    $("#flowInner").dataset.breath = x.id;
+  }
+
+  function beginPranayama(id) {
+    const x = pranaById(id);
+    const rounds = (S.breathRounds && S.breathRounds[id]) || x.rounds;
+    stopBreathEngine();
+    // build the sequence of phases
+    const seq = [];
+    if (x.pump) {
+      for (let r = 0; r < rounds; r++) {
+        for (let i = 0; i < x.pump.n; i++) seq.push({ k: "pump", s: x.pump.s, say: x.id === "kapalabhati" ? "Sharp out" : "In · out", n: i + 1, of: x.pump.n, round: r + 1 });
+        if (r < rounds - 1) seq.push({ k: "rest", s: x.pump.rest, say: "Rest — breathe normally", round: r + 1 });
+      }
+    } else {
+      const nIn = x.steps.filter((st) => st.k === "in").length;
+      for (let r = 0; r < rounds; r++) {
+        let k = 0;
+        x.steps.forEach((st) => {
+          if (st.k === "in") k++;
+          seq.push(Object.assign({ round: r + 1, to: st.k === "in" ? 0.62 + 0.38 * (k / nIn) : null }, st));
+        });
+      }
+    }
+    breathEngine = { id, seq, i: 0, started: Date.now(), rounds, paused: false };
+    $("#flowInner").innerHTML =
+      '<div class="flow-top"><span class="eyebrow">' + esc(x.name) + '</span><span class="muted small" id="bRound"></span></div>' +
+      '<div class="pr-stage"><div class="pr-circle" id="bCircle"></div><div class="pr-text"><b id="bSay"></b><span id="bCount"></span></div></div>' +
+      '<div class="flow-btns"><button type="button" class="btn-ghost-dark" data-h-bpause>Pause</button>' +
+      '<button type="button" class="btn-primary" data-h-bfinish>Finish</button></div>';
+    ringBell("bell", 1);
+    runPhase();
+  }
+
+  function runPhase() {
+    const e = breathEngine;
+    if (!e) return;
+    if (e.i >= e.seq.length) { finishPranayama(true); return; }
+    const ph = e.seq[e.i];
+    const c = $("#bCircle");
+    if (!c) { stopBreathEngine(); return; }
+    $("#bSay").textContent = ph.say;
+    $("#bRound").textContent = "Round " + ph.round + " of " + e.rounds;
+    if (ph.k === "pump") {
+      c.style.transition = "transform " + (ph.s * 0.35) + "s ease-out";
+      c.style.transform = "scale(.86)";
+      setTimeout(() => { if (c.isConnected) { c.style.transition = "transform " + (ph.s * 0.6) + "s ease-in"; c.style.transform = "scale(.7)"; } }, ph.s * 350);
+      $("#bCount").textContent = ph.n + " / " + ph.of;
+    } else {
+      c.style.transition = "transform " + ph.s + "s ease-in-out";
+      if (ph.k === "in") c.style.transform = "scale(" + (ph.to || 1) + ")";
+      else if (ph.k === "out") c.style.transform = "scale(.62)";
+      else if (ph.k === "rest") c.style.transform = "scale(.75)";
+      let left = Math.round(ph.s);
+      const tickDown = () => {
+        if (!breathEngine || breathEngine !== e || e.paused) return;
+        $("#bCount") && ($("#bCount").textContent = left > 0 ? String(left) : "");
+        left--;
+        if (left >= 0) e.cd = setTimeout(tickDown, 1000);
+      };
+      tickDown();
+    }
+    c.dataset.k = ph.k;
+    e.t = setTimeout(() => { e.i++; runPhase(); }, ph.s * 1000);
+  }
+
+  function finishPranayama(complete) {
+    const e = breathEngine;
+    if (!e) return;
+    const x = pranaById(e.id);
+    const secs = Math.max(1, Math.round((Date.now() - e.started) / 1000));
+    const roundsDone = complete ? e.rounds : (e.seq[Math.max(0, e.i - 1)] || { round: 0 }).round;
+    stopBreathEngine();
+    ringBell("bowl", 1);
+    const draft = { id: e.id, secs, rounds: roundsDone, feelings: [] };
+    S.breathDraft = draft;
+    renderBreathSummary();
+  }
+
+  function renderBreathSummary() {
+    const d = S.breathDraft;
+    const x = pranaById(d.id);
+    $("#flowInner").innerHTML =
+      '<div class="flow-top"><span class="eyebrow">Well breathed</span></div>' +
+      '<div class="moment-face">' + mascot(90, "sleepy") + "</div>" +
+      '<h2 id="flowTitle" class="flow-h center">' + esc(x.name) + "</h2>" +
+      '<p class="muted center">' + d.rounds + (d.rounds === 1 ? " round" : " rounds") + " · " + (d.secs >= 60 ? Math.round(d.secs / 60) + " min" : d.secs + " sec") + "</p>" +
+      '<div class="field"><span class="field-label">How do you feel now?</span>' + chipGroup("bfeel", ["Calmer", "Clearer", "Lighter", "Awake", "Warm", "Cool", "Sleepy", "The same", "Uneasy"], d.feelings, "sage") + "</div>" +
+      readMore(x).replace("<details", "<details open") +
+      '<button type="button" class="btn-primary" data-h-bsave>Keep it in my journal</button>' +
+      '<button type="button" class="link-btn center" data-h-bclose>Close without saving</button>';
+  }
+
+  function saveBreath() {
+    const d = S.breathDraft;
+    if (!d) return;
+    const x = pranaById(d.id);
+    S.sessions.push({ id: uid(), passion: "breath:" + d.id, passionName: x.name, start: Date.now() - d.secs * 1000, minutes: Math.max(1, Math.round(d.secs / 60)),
+      reasons: [], thought: "", before: { feelings: (S.breathSel || []).map((g) => ((BREATH_FEELINGS.concat(BREATH_WANTS).find((f) => f.id === g) || {}).label || g)), mood: null },
+      after: { feelings: d.feelings, mood: null }, note: d.rounds + " rounds of " + x.name + " (" + x.en.toLowerCase() + ")", parked: [] });
+    S.breathDraft = null;
+    save();
+    closeFlow();
+    toast("Kept in your journal");
+  }
+
   /* ---------- Quick starts: "Just 2 min", meditation without questions ---------- */
   function quickStart(pid, minutes, med) {
     if (S.active) { openFlow(); renderDoing(); return; }
@@ -1368,6 +1629,31 @@
       b.textContent = S.gentle ? "Show numbers again" : "Gentle mode: hide numbers";
       toast(S.gentle ? "Numbers hidden" : "Numbers back"); return;
     }
+    if (d.hBsel) { S.breathSel = S.breathSel || []; toggle(S.breathSel, d.hBsel); save(); renderBreathe(); return; }
+    if (d.hBsuggest !== undefined) { openPranayama(suggestBreath(), true); return; }
+    if (d.hBopen) { openPranayama(d.hBopen, false); return; }
+    if (d.hBround) {
+      const id = $("#flowInner").dataset.breath;
+      const x = pranaById(id);
+      S.breathRounds = S.breathRounds || {};
+      const cur = S.breathRounds[id] || x.rounds;
+      S.breathRounds[id] = Math.max(1, Math.min(40, cur + Number(d.hBround)));
+      save();
+      const n = $(".rounds-num"); if (n) n.textContent = S.breathRounds[id];
+      return;
+    }
+    if (d.hBbegin) { beginPranayama(d.hBbegin); return; }
+    if (d.hBpause !== undefined) {
+      const e2 = breathEngine;
+      if (!e2) return;
+      if (!e2.paused) { e2.paused = true; clearTimeout(e2.t); clearTimeout(e2.cd); b.textContent = "Resume"; $("#bSay").textContent = "Paused"; }
+      else { e2.paused = false; b.textContent = "Pause"; runPhase(); }
+      return;
+    }
+    if (d.hBfinish !== undefined) { finishPranayama(false); return; }
+    if (d.hPickBfeel) { toggle(S.breathDraft.feelings, d.hPickBfeel); renderBreathSummary(); return; }
+    if (d.hBsave !== undefined) { saveBreath(); return; }
+    if (d.hBclose !== undefined) { stopBreathEngine(); S.breathDraft = null; closeFlow(); return; }
     if (d.hLen) { S.playLen = d.hLen; save(); renderPassions(); return; }
     if (d.hPlayView) { S.playView = d.hPlayView; save(); renderPassions(); window.scrollTo({ top: 0 }); return; }
     if (d.hPlayRow) {

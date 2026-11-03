@@ -44,12 +44,17 @@
   };
 
   function connected() { return !!(meta.token && meta.gistId); }
+  // Keys copied on a phone sometimes pick up spaces, line breaks, quotes or invisible characters.
+  function cleanToken(t) { return String(t || "").replace(/[\s\u200B-\u200D\u2060\uFEFF"'“”‘’`<>]/g, ""); }
+  function looksLikeKey(t) { return /^(ghp_[A-Za-z0-9]{30,}|github_pat_[A-Za-z0-9_]{40,})$/.test(t); }
+  const AUTH_MSG = "GitHub stopped accepting this device's key. It may have expired (GitHub's default is 30 days), been regenerated or deleted. Paste a key again — your sync file is kept.";
 
   function api(path, opts) {
     return fetch(API + path, Object.assign({}, opts, {
       headers: { Authorization: "Bearer " + meta.token, Accept: "application/vnd.github+json", "Content-Type": "application/json" },
     })).then((r) => {
-      if (r.status === 401) throw new Error("The key was refused. Make a new one with the “gist” permission.");
+      if (r.status === 401) throw new Error("auth");
+      if (r.status === 403 && r.headers.get("x-ratelimit-remaining") === "0") throw new Error("GitHub asked us to slow down — it will try again in a while");
       if (r.status === 404) throw new Error("not-found");
       if (!r.ok) throw new Error("GitHub said " + r.status);
       return r.status === 204 ? null : r.json();
@@ -133,7 +138,7 @@
 
   // Pull first; reload the page if another device had newer data.
   function sync(reason) {
-    if (!connected() || busy || !navigator.onLine) return Promise.resolve();
+    if (!connected() || busy || !navigator.onLine || meta.authFailed) return Promise.resolve();
     busy = true;
     return readGist().then((remote) => {
       const local = bundle();
@@ -168,6 +173,7 @@
       });
     }).catch((e) => {
       if (e.message === "not-found") { meta.gistId = ""; writeMeta(); setStatus("The sync gist was deleted — connect again"); return; }
+      if (e.message === "auth") { meta.authFailed = true; writeMeta(); setStatus(AUTH_MSG); return; }
       setStatus("Couldn't sync: " + e.message);
     }).finally(() => { busy = false; });
   }
@@ -187,11 +193,18 @@
   }
 
   function connect(token) {
-    meta.token = token.trim();
+    const clean = cleanToken(token);
+    if (!looksLikeKey(clean)) {
+      setStatus("That doesn't look like a complete GitHub key. It starts with ghp_ and is about 40 characters long — try copying it again.");
+      return Promise.reject(new Error("format"));
+    }
+    const keepGist = meta.gistId;
+    meta.token = clean;
+    meta.authFailed = false;
     writeMeta();
     setStatus("Connecting…");
     return api("/gists?per_page=100").then((list) => {
-      const found = (list || []).find((g) => g.description === DESC && g.files && g.files[FILE]);
+      const found = (list || []).find((g) => g.id === keepGist) || (list || []).find((g) => g.description === DESC && g.files && g.files[FILE]);
       if (found) {
         meta.gistId = found.id;
         meta.lastSynced = 0; // take what's there (merging if this device has its own data)
@@ -209,7 +222,15 @@
         writeMeta();
         setStatus("Connected. This device is the first one — everything is saved.");
       });
-    }).catch((e) => { meta.token = ""; meta.gistId = ""; writeMeta(); setStatus("Couldn't connect: " + e.message); throw e; });
+    }).catch((e) => {
+      meta.token = "";
+      meta.gistId = keepGist || "";
+      writeMeta();
+      setStatus(e.message === "auth"
+        ? "GitHub didn't accept that key. Check it has the “gist” box ticked and hasn't expired, or make a new one with “No expiration”."
+        : "Couldn't connect: " + e.message);
+      throw e;
+    });
   }
 
   function disconnect() {
@@ -230,6 +251,16 @@
   function renderDialog() {
     const box = document.getElementById("syncBody");
     if (!box) return;
+    if (connected() && meta.authFailed) {
+      box.innerHTML =
+        '<p class="sync-warn">Sync is paused on this device.</p>' +
+        '<p class="muted small" id="syncDialogStatus">' + AUTH_MSG + "</p>" +
+        '<p class="muted small">Check your keys on <a href="https://github.com/settings/tokens" target="_blank" rel="noopener">GitHub → Settings → Tokens</a>. If it expired, make a new one <a href="https://github.com/settings/tokens/new?scopes=gist&amp;description=My%20Hangout%20sync" target="_blank" rel="noopener">here</a> with Expiration “No expiration” and only <b>gist</b> ticked.</p>' +
+        '<label class="field">GitHub key<input type="text" id="syncToken" placeholder="ghp_…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
+        '<div class="flow-btns"><button type="button" class="btn-ghost-dark" id="syncOff">Stop syncing here</button>' +
+        '<button type="button" class="btn-primary" id="syncConnect">Use this key</button></div>';
+      return;
+    }
     if (connected()) {
       box.innerHTML =
         '<p class="sync-ok">This device is syncing.</p>' +
@@ -245,7 +276,7 @@
         "<li>Set <b>Expiration</b> to “No expiration” (or a date far away). Only <b>gist</b> should be ticked.</li>" +
         "<li>Press <b>Generate token</b> and copy the key that starts with <code>ghp_</code>.</li>" +
         "<li>Paste it below. Do the same on each device (you can reuse the same key).</li></ol>" +
-        '<label class="field">GitHub key<input type="password" id="syncToken" placeholder="ghp_…" autocomplete="off"></label>' +
+        '<label class="field">GitHub key<input type="text" id="syncToken" placeholder="ghp_…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label>' +
         '<p class="muted small" id="syncDialogStatus">' + (meta.status || "") + "</p>" +
         '<button type="button" class="btn-primary" id="syncConnect">Connect this device</button>' +
         '<p class="muted small">The key stays in this browser and can only read and write gists — not your code or anything else.</p>';
@@ -262,7 +293,7 @@
       if (!v.trim()) return;
       t.disabled = true;
       t.textContent = "Connecting…";
-      connect(v).then(renderDialog, renderDialog);
+      connect(v).then(renderDialog, () => { renderDialog(); const f = document.getElementById("syncToken"); if (f) f.value = v; });
     }
     if (t.id === "syncNow") { meta.dirty = true; writeMeta(); sync("manual").then(renderDialog); }
     if (t.id === "syncOff") { if (confirm("Stop syncing on this device? Your data stays here and in the gist.")) { disconnect(); renderDialog(); } }
@@ -271,7 +302,7 @@
   /* ---------- When to sync ---------- */
   document.addEventListener("DOMContentLoaded", function () {
     const el = document.getElementById("syncStatus");
-    if (el) el.textContent = connected() ? (meta.status || "Syncing") : "Not syncing yet";
+    if (el) el.textContent = connected() ? (meta.authFailed ? "Sync paused — tap to paste your key again" : (meta.status || "Syncing")) : "Not syncing yet";
     sync("open");
   });
   document.addEventListener("visibilitychange", function () {
