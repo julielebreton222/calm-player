@@ -190,6 +190,52 @@ window.CALM_DATA = {
     { id: "move-joy", kind: "dance", name: "Move for joy", items: ["q7ytBN8eaiM", "TItIq0L0e58", "vI5MzT-wIjs", "TcKGkEyoYGg"] },
   ],
 
+  // My YouTube playlist "background videos": music & ambience to play under anything.
+  // Playing the whole list streams it straight from YouTube, so new additions show up by themselves.
+  background: {
+    playlistId: "PL-caKhR0_LKxbNTNacuBljCO90A7htG3e",
+    name: "background videos",
+    groups: [
+      { id: "focus", label: "Focus & pomodoro" },
+      { id: "lofi", label: "Lofi & jazz" },
+      { id: "dreamy", label: "Calm & dreamy" },
+      { id: "chant", label: "Chant & flute" },
+      { id: "rain", label: "Rain" },
+      { id: "talks", label: "Talks & stories" },
+    ],
+    items: [
+      { id: "NJuSStkIZBg", group: "lofi", title: "Rainy Jazz Cafe - Slow Jazz Music in Coffee Shop Ambience for Work, Study and Relaxation", channel: "Coffee Shop Vibes" },
+      { id: "eH-_GMhH-kk", group: "focus", title: "Study | Work Aid • \"The Office\" Ambience 🎧 Keyboard Typing & Pencil Writing sounds", channel: "Lullablocks" },
+      { id: "ij2wEWhbHjI", group: "focus", title: "🍀3-HOUR STUDY & WORK AMBIENCE/ Cottage Relaxing Stream Sounds for DEEP FOCUS/POMODORO Timer & Alarm", channel: "The Sherry Formula" },
+      { id: "GpkeZQs_-Gw", group: "focus", title: "🚀 Pomodoro TIMER with BINAURAL BEATS 🚀 ( 40hz ) [25/5 min] Ambience & music to STUDY and concentrate", channel: "pomodoro · ikeshuku" },
+      { id: "1ex_bNIFR1A", group: "focus", title: "3 HOUR STUDY WITH ME | Background noise, Rain Sounds, 10-min break, No Music", channel: "Merve", embed: false },
+      { id: "nS9QtzGwBcc", group: "dreamy", title: "AphexTwin - Stone in focus -  Philosophical Ape 2 hours", channel: "Sleeptimer" },
+      { id: "IWDrzAGouLQ", group: "focus", title: "ADHD Pomodoro Timer - 4x25 minutes [Lofi - Chill🎵]", channel: "The Mini ADHD Coach" },
+      { id: "lkkGlVWvkLk", group: "focus", title: "Intense Study - 40Hz Gamma Binaural Beats to Increase Productivity and Focus", channel: "Study Sonic Focus" },
+      { id: "lTRiuFIWV54", group: "lofi", title: "1 A.M Study Session 📚 [lofi hip hop]", channel: "Lofi Girl" },
+      { id: "FHHVHSe-_AM", group: "talks", title: "Poetry as Enchantment", channel: "Library of Congress" },
+      { id: "7vTraPeiEtw", group: "dreamy", title: "Music to Stop Doomscrolling to | Spiritual Paralysis by Hexsystem (Full Album)", channel: "u m a m i" },
+      { id: "bLXzkz21nmI", group: "talks", title: "The Creation Myth of the Proto Indo-Europeans", channel: "Crecganford" },
+      { id: "frsy3mdvvaw", group: "dreamy", title: "Classical Music for When you are plotting your Revenge-#classicalmusic #violin / Violin", channel: "Moo Wire Media" },
+      { id: "ABGURyOP65g", group: "lofi", title: "☆𝘸𝘩𝘦𝘳𝘦 𝘢𝘮 𝘪? ☆𝘸𝘦𝘪𝘳𝘥𝘤𝘰𝘳𝘦/𝘥𝘳𝘦𝘢𝘮𝘤𝘰𝘳𝘦/𝘵𝘳𝘢𝘶𝘮𝘢𝘤𝘰𝘳𝘦 𝘱𝘭𝘢𝘺𝘭𝘪𝘴𝘵 ☆", channel: "• pipermint! •" },
+      { id: "VbDx4-8VEgs", group: "lofi", title: "drive it like you stole it.", channel: "home alone." },
+      { id: "Llour2YvsiI", group: "lofi", title: "[Playlist] When you don't want to think about anything | Cozy Relaxing Jazz Music Background", channel: "WRG 우리가 듣고 싶어서 연주한 playlist" },
+      { id: "__1uVWUSJe4", group: "lofi", title: "Human no AI lofi Music in a Real Poppy Field · Dreamy Drawing Session with our Pup", channel: "Yellow Cherry Jam" },
+      { id: "MYJAlhBzvU4", group: "lofi", title: "Study and Work with Carrie Bradshaw | Jazz 🍸", channel: "TOUT Studio" },
+      { id: "mAnyyhytrrI", group: "focus", title: "⏰️Pomodoro 50/10 • (ASMR) Writer's Old Study📝 In-game sounds + fireplace + rain 🌧 ", channel: "Lullablocks" },
+      { id: "Bqr4-cxoNsQ", group: "focus", title: "⏰️Pomodoro 25/5 • Study with Katie + rain with thunder & windy ambience▪️No music version📖🎧", channel: "Lullablocks" },
+      { id: "gAsNvXDsrGA", group: "dreamy", title: "an hour of relaxing spongebob music", channel: "float" },
+      { id: "9Y8OA70vmeY", group: "dreamy", title: "Stone In Focus - Aphex Twin, but it's a perfect loop [1 hour]", channel: "SlomanajaRuka" },
+      { id: "MWPYhebILb4", group: "dreamy", title: "A playlist that makes you feel calm and dreamy..", channel: "Pianza" },
+      { id: "0dcFWLV_OlI", group: "rain", title: "Soothing rain sounds on the clay jars with distant thunder. ⛈️Great for relaxing and deep sleep.", channel: "healing by nature" },
+      { id: "ucKb3ZLft5Q", group: "dreamy", title: "a vintage european dream | soft strings + classical music to relax", channel: "Lepreezy", embed: false },
+      { id: "bIbLPDlbW-Q", group: "chant", title: "Mayan Temple Flute  The biggest one ever made. (the Sound of the Temple)", channel: "Eagle Feather and Aida Mendoza" },
+      { id: "jeZSyHTUFSU", group: "chant", title: "Mayan Full Moon (Mayan Temple Flute)", channel: "Eagle Feather and Aida Mendoza" },
+      { id: "Rt2empUOJfU", group: "chant", title: "The Reverent Calm Of Nuns Singing Gregorian Chants", channel: "Harmonia Antiqua" },
+      { id: "VVjYff1nK5M", group: "chant", title: "The Mask of the Forest | 1 Hour of Native American Flute Music", channel: "Eagle Feather and Aida Mendoza" },
+    ],
+  },
+
   // Calisthenics progression ladders. `step` = index of the current rung.
   ladders: [
     { id: "push", label: "Push", steps: ["Wall push-up", "Incline push-up", "Knee push-up", "Full push-up", "Diamond push-up"], step: 1, last: "3 × 10" },

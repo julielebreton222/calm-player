@@ -260,14 +260,51 @@
     $("#bigPlay").hidden = false;
   }
 
-  function startSound(id) {
-    state.sound = id;
+  const BG = DATA.background || { items: [], groups: [] };
+  function bgById(id) { return BG.items.find((x) => x.id === id) || null; }
+  function soundTitle(id) {
+    if (!id) return "";
+    if (id.startsWith("list:")) return BG.name ? "“" + BG.name + "” playlist" : "My playlist";
+    return ((videoById(id) || bgById(id)) || {}).title || "Background sound";
+  }
+  function isListPlaying() { return (state.sound || "").startsWith("list:"); }
+
+  let bgErrors = 0;
+  function soundEvents() {
+    return {
+      onReady: function (e) {
+        e.target.setVolume(state.soundVol);
+        e.target.playVideo();
+      },
+      onStateChange: function (e) {
+        // A single video loops; the whole playlist moves on by itself.
+        if (e.data === YT.PlayerState.ENDED && !isListPlaying()) e.target.playVideo();
+        if (e.data === YT.PlayerState.PLAYING) { bgErrors = 0; updateBgBar(); }
+      },
+      onError: function () {
+        bgErrors++;
+        if (isListPlaying() && bgErrors < 3 && soundPlayer && soundPlayer.nextVideo) { soundPlayer.nextVideo(); return; }
+        bgErrors = 0;
+        toast("That one can't play inside the app right now.");
+        stopSound();
+      },
+    };
+  }
+
+  function afterSoundStart() {
     save();
     renderSoundChips();
     renderSoundGrid();
-    $("#soundMiniWrap").hidden = false;
+    renderBgGrid();
+    updateBgBar();
+  }
+
+  function startSound(id) {
+    state.sound = id;
+    afterSoundStart();
     withYT(function () {
       if (soundPlayer && typeof soundPlayer.loadVideoById === "function") {
+        soundPlayer.setLoop(false);
         soundPlayer.loadVideoById(id);
         soundPlayer.setVolume(state.soundVol);
         return;
@@ -276,25 +313,84 @@
         host: "https://www.youtube-nocookie.com",
         videoId: id,
         playerVars: { ...PLAYER_VARS, controls: 0, loop: 1, playlist: id },
-        events: {
-          onReady: function (e) { e.target.setVolume(state.soundVol); e.target.playVideo(); },
-          onStateChange: function (e) {
-            // Loop single soundscape even if YouTube ignores `loop`.
-            if (e.data === YT.PlayerState.ENDED) e.target.playVideo();
-          },
-          onError: function () { toast("That soundscape can't play right now."); stopSound(); },
-        },
+        events: soundEvents(),
       });
     });
+  }
+
+  function startBgList(shuffle) {
+    if (!BG.playlistId) return;
+    state.sound = "list:" + BG.playlistId;
+    afterSoundStart();
+    const startAt = shuffle ? Math.floor(Math.random() * Math.max(1, BG.items.length)) : 0;
+    withYT(function () {
+      const applyShuffle = () => {
+        if (!soundPlayer || typeof soundPlayer.setShuffle !== "function") return;
+        soundPlayer.setShuffle(!!shuffle);
+        soundPlayer.setLoop(true);
+      };
+      if (soundPlayer && typeof soundPlayer.loadPlaylist === "function") {
+        soundPlayer.loadPlaylist({ list: BG.playlistId, listType: "playlist", index: startAt });
+        soundPlayer.setVolume(state.soundVol);
+        setTimeout(applyShuffle, 1500);
+        return;
+      }
+      soundPlayer = new YT.Player("ytSound", {
+        host: "https://www.youtube-nocookie.com",
+        playerVars: { ...PLAYER_VARS, controls: 0, listType: "playlist", list: BG.playlistId, index: startAt },
+        events: soundEvents(),
+      });
+      setTimeout(applyShuffle, 2500);
+    });
+    toast(shuffle ? "Shuffling your background playlist" : "Playing your background playlist");
   }
 
   function stopSound() {
     state.sound = null;
     save();
     if (soundPlayer && typeof soundPlayer.stopVideo === "function") soundPlayer.stopVideo();
-    $("#soundMiniWrap").hidden = true;
     renderSoundChips();
     renderSoundGrid();
+    renderBgGrid();
+    updateBgBar();
+  }
+
+  function updateBgBar() {
+    const on = !!state.sound;
+    $("#bgBar").hidden = !on;
+    document.body.classList.toggle("bg-on", on);
+    if (!on) return;
+    let now = soundTitle(state.sound);
+    if (isListPlaying() && soundPlayer && typeof soundPlayer.getVideoData === "function") {
+      const d = soundPlayer.getVideoData();
+      if (d && d.title) now = d.title;
+    }
+    $("#bgNowTitle").textContent = now;
+    $("#bgNowKind").textContent = isListPlaying() ? "Background · " + (BG.name || "playlist") : "Playing underneath";
+    $("#bgPrev").hidden = $("#bgNext").hidden = !isListPlaying();
+    $("#bgVol").value = state.soundVol;
+  }
+
+  function renderBgGrid() {
+    const grid = $("#grid-bg");
+    if (!grid) return;
+    const gsel = state.bgGroup || "";
+    $$("#bgGroups [data-bg-group]").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.bgGroup === gsel)));
+    const list = BG.items.filter((x) => !gsel || x.group === gsel);
+    grid.innerHTML = list.map((x) => {
+      const on = state.sound === x.id;
+      const playBtn = x.embed === false
+        ? '<a class="bg-btn" href="' + watchUrl(x.id) + '" target="_blank" rel="noopener">Open on YouTube</a>'
+        : on
+          ? '<button type="button" class="bg-btn" data-sound-off>Stop</button>'
+          : '<button type="button" class="bg-btn" data-bg-play="' + x.id + '" aria-label="Play ' + esc(x.title) + ' in the background">Play in background</button>';
+      return '<article class="bg-tile' + (on ? " on" : "") + '">' +
+        '<img src="' + thumb(x.id) + '" alt="" loading="lazy">' +
+        '<div class="bg-text"><b>' + esc(x.title) + '</b><span>' + esc(x.channel) +
+        (x.embed === false ? " · plays on YouTube only" : "") + "</span></div>" + playBtn + "</article>";
+    }).join("") || '<p class="empty">Nothing in this group.</p>';
+    const listBtnOn = isListPlaying();
+    $("#bgPlayAll").textContent = listBtnOn ? "Playing all" : "Play all";
   }
 
   /* ------------------------------------------------------------------ */
@@ -382,6 +478,7 @@
   function renderNav() {
     const links = DATA.sections.map((s) => ({ href: "#" + s.id, label: s.label }));
     if (state.kept.length) links.unshift({ href: "#kept", label: "♡ Kept" });
+    if (BG.items.length) links.push({ href: "#background", label: "Background" });
     links.push({ href: "#lists", label: "Playlists" });
     $("#nav").innerHTML = links.map((l) => '<a href="' + l.href + '">' + esc(l.label) + "</a>").join("");
     observeSections();
@@ -643,13 +740,13 @@
   }
 
   function renderSoundChips() {
-    const chips = [{ id: "", title: "Off" }].concat(soundList());
+    const chips = [{ id: "", title: "Off" }].concat(BG.playlistId ? [{ id: "list:" + BG.playlistId, title: "My background playlist" }] : [], soundList());
     $("#soundChips").innerHTML = chips.map((s) =>
       '<button type="button" class="chip" data-sound-chip="' + s.id + '" aria-pressed="' + ((state.sound || "") === s.id) + '">' + esc(s.title) + "</button>"
     ).join("");
     $("#soundVol").value = state.soundVol;
     const btn = $("#soundUnderBtn");
-    btn.textContent = state.sound ? "Sound: " + ((videoById(state.sound) || {}).title || "on") : "Sound under it";
+    btn.textContent = state.sound ? "Sound: " + soundTitle(state.sound) : "Sound under it";
   }
 
   /* Playlists section */
@@ -713,7 +810,18 @@
     }).join("");
   }
 
+  function renderBgGroups() {
+    const box = $("#bgGroups");
+    if (!box) return;
+    box.innerHTML = [{ id: "", label: "All" }].concat(BG.groups).map((g) =>
+      '<button type="button" class="chip" data-bg-group="' + g.id + '" aria-pressed="false">' + esc(g.label) +
+      ' <span class="muted small">' + BG.items.filter((x) => !g.id || x.group === g.id).length + "</span></button>").join("");
+  }
+
   function renderAll() {
+    renderBgGroups();
+    renderBgGrid();
+    updateBgBar();
     renderRestore();
     renderGreeting();
     renderNav();
@@ -881,7 +989,14 @@
     }
     if (d.sound) { startSound(d.sound); return; }
     if (d.soundOff !== undefined) { stopSound(); return; }
-    if (d.soundChip !== undefined) { if (d.soundChip) startSound(d.soundChip); else stopSound(); return; }
+    if (d.soundChip !== undefined) {
+      if (!d.soundChip) stopSound();
+      else if (d.soundChip.startsWith("list:")) startBgList(false);
+      else startSound(d.soundChip);
+      return;
+    }
+    if (d.bgPlay) { startSound(d.bgPlay); toast("Playing in the background"); return; }
+    if (d.bgGroup !== undefined) { state.bgGroup = d.bgGroup; save(); renderBgGrid(); return; }
     if (d.filter) {
       state.filters[d.filter] = state.filters[d.filter] === d.value ? null : d.value;
       save();
@@ -975,9 +1090,21 @@
   });
   $("#soundVol").addEventListener("input", function () {
     state.soundVol = Number(this.value);
+    $("#bgVol").value = state.soundVol;
     if (soundPlayer && typeof soundPlayer.setVolume === "function") soundPlayer.setVolume(state.soundVol);
     save();
   });
+  $("#bgVol").addEventListener("input", function () {
+    state.soundVol = Number(this.value);
+    $("#soundVol").value = state.soundVol;
+    if (soundPlayer && typeof soundPlayer.setVolume === "function") soundPlayer.setVolume(state.soundVol);
+    save();
+  });
+  $("#bgStop").addEventListener("click", stopSound);
+  $("#bgNext").addEventListener("click", () => { if (soundPlayer && soundPlayer.nextVideo) soundPlayer.nextVideo(); });
+  $("#bgPrev").addEventListener("click", () => { if (soundPlayer && soundPlayer.previousVideo) soundPlayer.previousVideo(); });
+  $("#bgPlayAll").addEventListener("click", () => startBgList(false));
+  $("#bgShuffle").addEventListener("click", () => startBgList(true));
   $("#clearFilters").addEventListener("click", function () {
     state.filters = { feel: null, len: null, level: null, popular: null };
     save();

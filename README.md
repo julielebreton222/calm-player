@@ -16,6 +16,7 @@ Plain HTML, CSS and JavaScript. There's no build step and nothing to install.
 - **Player:** embedded YouTube player (privacy-enhanced mode), with Keep ♡, Add to playlist, and a **soundscape underneath** with its own volume.
 - **Playlists:** each playlist holds one kind of video (Yoga, Calisthenics, Flexibility, Pilates or Dance). Up next queue, play a whole playlist (auto-advances), plus create, rename, reorder and delete.
 - **By person / channel:** an automatic playlist of every video in your library from one person, one per kind. Paste a link on that person's row to add more of their videos.
+- **Background:** my YouTube playlist “background videos” (focus & pomodoro, lofi & jazz, calm & dreamy, chant & flute, rain, talks). Play all or shuffle the whole list, or one video, under anything. A bottom bar keeps it playing with volume, next/previous and stop.
 - **Remove any video** with the bin button (or "Remove" under the player). Undo right away, or restore removed starter videos from the footer.
 - **My yoga path:** teachers marked To try / Trying / Kept / Not for me. After a class there's a "how was it?" rating and a "What I loved in India" note to compare against.
 - **Calisthenics ladders:** Push, Pull, Legs and Core progressions. Log reps and move up a step.
