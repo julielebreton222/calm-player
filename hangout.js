@@ -67,6 +67,29 @@
       "Make her an outfit from things you already have.",
       "She has a big day tomorrow. Play the evening before.",
     ] },
+    { id: "cards", name: "Batch-making cards", color: "#F7B2CC", energy: ["make", "low", "restless"], prompts: [
+      "Make five birthday cards at once, so you always have one ready.",
+      "Paint one big watercolour wash, cut it into six, and turn each piece into a card.",
+      "Make three “thinking of you” cards — no occasion needed.",
+      "Make a set of thank-you cards, all with the same little motif in different colours.",
+      "Cut a simple paper-cut shape — a flower, a moon, a bird — and repeat it on four cards.",
+      "Make cards for the next season's occasions: who has a birthday, a new home, a new baby?",
+      "Make one card for someone who might need cheering up, and a spare for later.",
+      "Press flowers or leaves from a walk and glue one onto each card.",
+      "Write the inside first: three kind sentences you could give anyone, then decorate around them.",
+      "Stock up your card box: count what's there and make what's missing.",
+    ] },
+    { id: "letters", name: "Letters to someone I love", color: "#E0458A", energy: ["low", "make", "restless"], prompts: [
+      "Pick one person. Write three specific reasons you love them — little things only they do.",
+      "Write about a moment with them you still think about, and what it meant to you.",
+      "Tell them what you see in them that they might not see in themselves.",
+      "Write “I love the way you…” and finish it five different ways.",
+      "Write to someone you haven't told in a while. Start with: “I was thinking of you because…”",
+      "Write about how they changed you — something you do now because of them.",
+      "Write a letter to be opened on a hard day: what you'd want them to remember.",
+      "Thank them for one ordinary thing they do that makes your life better.",
+      "Write to your younger self, or your future self, as someone you love.",
+    ] },
     { id: "morning-pages", name: "Morning pages", color: "#F3DCC8", energy: ["low", "restless"], prompts: [
       "Three pages by hand, first thing. Don't reread.",
       "Write without stopping until the pages are full.",
@@ -767,7 +790,7 @@
     const person = S.people.length ? S.people[S.reminderIndex % S.people.length] : null;
     const snd = window.CalmPlayer ? window.CalmPlayer.soundOptions() : [];
     const cur = window.CalmPlayer ? window.CalmPlayer.currentSound() : "";
-    const writing = ["morning-pages", "journaling", "spell", "talking", "curiosity", "fairytales", "song"].includes(a.passion);
+    const writing = ["morning-pages", "journaling", "spell", "talking", "curiosity", "fairytales", "song", "letters", "cards"].includes(a.passion);
     const med = a.med ? '<div class="med-set"><span class="eyebrow">Bells</span><span>' +
       esc((MED_SOUNDS.find((x) => x.id === a.med.sound) || {}).label || "Bell") + " · start" + (a.med.interval ? " · every " + a.med.interval + " min" : "") + " · three at the end</span>" +
       '<span class="muted small">Keep the screen on so the bells can ring.</span></div>' : "";
