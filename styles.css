@@ -1296,3 +1296,9 @@ button.row { border-left: 0; border-right: 0; border-top: 0; font: inherit; curs
 .cue-box { border: 1px solid var(--line); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; background: #fff; }
 .cue-top { display: flex; align-items: center; gap: 12px; }
 .cue-box .chip { font-size: 14px; }
+
+/* gratitude */
+.grat-box { display: flex; flex-direction: column; gap: 10px; }
+.grat-nudge { margin: 0; padding: 10px 14px; border-radius: 12px; background: #FFF6DD; color: #6B4A12; font-size: 15px; line-height: 1.45; }
+.grat-list { margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 17px; line-height: 1.4; }
+.grat-list.small { font-size: 14px; }

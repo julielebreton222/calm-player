@@ -90,6 +90,15 @@
       "Thank them for one ordinary thing they do that makes your life better.",
       "Write to your younger self, or your future self, as someone you love.",
     ] },
+    { id: "gratitude", name: "Gratitude", color: "#F2C94C", gratitude: true, energy: ["low", "restless", "curious"], prompts: [
+      "Seven minutes. List what you have and are grateful for — and stay with each one until you feel it.",
+      "Start small: something you touched, tasted or saw today.",
+      "Someone who loves you. Picture their face before you write their name.",
+      "Something your body did for you today.",
+      "Something you have now that you once wished for.",
+      "A place that holds you. Imagine you're there for a breath.",
+      "Something you're learning, and that you get to learn it.",
+    ] },
     { id: "morning-pages", name: "Morning pages", color: "#F3DCC8", energy: ["low", "restless"], prompts: [
       "Three pages by hand, first thing. Don't reread.",
       "Write without stopping until the pages are full.",
@@ -763,6 +772,7 @@
       reasons: d.reasons, thought: d.thought.trim(), before: { feelings: d.feelings, mood: d.skipped ? null : d.mood },
       prompt: promptFor(passionById(d.passion)), look: lookFor(passionById(d.passion)), parked: [], notes: "",
     };
+    if (d.passion === "gratitude") S.active.planned = 7;
     if (d.passion === "meditation") {
       S.active.planned = d.med.minutes;
       S.active.med = { interval: d.med.interval, sound: d.med.sound, bells: 0, endRung: false };
@@ -806,6 +816,7 @@
         '<button type="button" class="icon-btn" data-h-next-reminder aria-label="Next reminder"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg></button></div>' : "") +
       (snd.length > 1 ? '<div class="field"><span>Sound underneath</span><div class="chip-row">' +
         snd.slice(0, 9).map((o) => '<button type="button" class="chip" data-h-sound="' + esc(o.id) + '" aria-pressed="' + (cur === o.id) + '">' + esc(o.title) + "</button>").join("") + "</div></div>" : "") +
+      (a.passion === "gratitude" ? gratitudeBox(a) : "") +
       (writing ? '<label class="field">My pages / notes<textarea id="hNotes" rows="5" placeholder="Write here if you like — it\'s saved with this session">' + esc(a.notes) + "</textarea></label>" : "") +
       '<form class="field park" data-h-park-form><label for="hPark">Urge to check something? Park it here and keep going</label>' +
       '<div class="cur-add"><input id="hPark" placeholder="e.g. reply to Léa, look up that song" maxlength="120"><button type="submit" class="btn-soft">Park</button></div>' +
@@ -819,6 +830,22 @@
     clearInterval(tick);
     tick = setInterval(updateClock, 1000);
     updateClock();
+  }
+
+  const GRAT_NUDGES = [
+    "Pause on this one. Where do you feel it in your body?",
+    "Let it be warm, not clever. Feel it before you write the next one.",
+    "If it isn't enjoyable, slow down — this is meant to feel good.",
+    "Breathe into the feeling for a moment.",
+    "Smile a little, even if it feels silly. Notice what changes.",
+  ];
+  function gratitudeBox(a) {
+    const list = a.grat || [];
+    const nudge = GRAT_NUDGES[list.length % GRAT_NUDGES.length];
+    return '<div class="grat-box"><form class="cur-add" data-h-grat-form><label class="sr-only" for="gratIn">I\'m grateful for…</label>' +
+      '<input id="gratIn" placeholder="I\'m grateful for…" maxlength="160" autocomplete="off"><button type="submit" class="btn-dark">Add</button></form>' +
+      (list.length ? '<p class="grat-nudge">' + esc(nudge) + "</p>" : "") +
+      '<ol class="grat-list">' + list.map((g) => "<li>" + esc(g) + "</li>").join("") + "</ol></div>";
   }
 
   function updateClock() {
@@ -839,7 +866,11 @@
     if (a.planned) {
       const pct = Math.min(1, ms / (a.planned * 60000));
       ring.style.setProperty("--pct", (pct * 360).toFixed(1) + "deg");
-      if (pct >= 1 && !a.doneNotice) { a.doneNotice = true; save(); toast("Time's up — finish when you're ready"); }
+      if (pct >= 1 && !a.doneNotice) {
+        a.doneNotice = true; save();
+        if (a.passion === "gratitude") { ringBell("bowl", 1); toast("Seven minutes of gratitude. Stay as long as you like."); }
+        else toast("Time's up — finish when you're ready");
+      }
     } else ring.style.setProperty("--pct", "360deg");
   }
 
@@ -882,7 +913,7 @@
     S.sessions.push({
       id: a.id, passion: a.passion, passionName: p ? p.name : "", start: a.start, minutes: mins,
       reasons: a.reasons, thought: a.thought, before: a.before, after: a.after,
-      note: (a.note || "").trim(), notes: (a.notes || "").trim(), parked: a.parked, prompt: a.prompt,
+      note: (a.note || "").trim(), notes: (a.notes || "").trim(), parked: a.parked, prompt: a.prompt, grat: a.grat || [],
     });
     if (a.passion && a.passion.startsWith("idea:")) {
       const c = (S.compost || []).find((x) => "idea:" + x.id === a.passion);
@@ -1624,6 +1655,7 @@
           return '<details class="jrow"><summary><span class="jtime">' + new Date(x.start).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }) + "</span>" +
             '<span class="row-main"><b>' + esc(name) + "</b><span>" + esc(moodWords(x)) + "</span></span></summary>" +
             '<div class="jmore">' + extra.map((t) => "<p>" + esc(t) + "</p>").join("") +
+            (x.grat && x.grat.length ? '<ol class="grat-list small">' + x.grat.map((g) => "<li>" + esc(g) + "</li>").join("") + "</ol>" : "") +
             (x.notes ? '<p class="jpages">' + esc(x.notes) + "</p>" : "") +
             '<button type="button" class="link-btn" data-h-del-session="' + esc(x.id) + '">Delete</button></div></details>';
         }).join("") + "</div></div>").join("")
@@ -1695,7 +1727,7 @@
     if (d.hMMin !== undefined) { momentDraft.minutes = Number(d.hMMin); renderMoment(); return; }
     if (d.hPickMfeel) { toggle(momentDraft.feelings, d.hPickMfeel); renderMoment(); return; }
     if (d.hMSave !== undefined) { saveMoment(); return; }
-    if (d.hTwo) { quickStart(d.hTwo, 2); return; }
+    if (d.hTwo) { quickStart(d.hTwo, d.hTwo === "gratitude" ? 7 : 2); return; }
     if (d.hSkip !== undefined) {
       if (!draft.passion) { toast("Pick what you'd like to do first"); $("#hPassion").focus(); return; }
       draft.skipped = true; draft.reasons = []; draft.feelings = []; begin(); return;
@@ -1748,6 +1780,7 @@
     if (d.hPlayView) { S.playView = d.hPlayView; save(); renderPassions(); window.scrollTo({ top: 0 }); return; }
     if (d.hPlayRow) {
       if (d.hPlayRow === "meditation") { location.hash = "#/meditate"; return; }
+      if (d.hPlayRow === "gratitude") { quickStart("gratitude", 7); return; }
       quickStart(d.hPlayRow, 0);
       return;
     }
@@ -1940,6 +1973,16 @@
       if ((S.spotify || []).some((x) => x.sid === r.sid)) { toast("Already here"); return; }
       S.spotify = (S.spotify || []).concat({ id: uid(), type: r.type, sid: r.sid });
       save(); renderSoundsExtras(); toast("Added from Spotify");
+      return;
+    }
+    if (f.dataset.hGratForm !== undefined) {
+      e.preventDefault();
+      const v = $("#gratIn").value.trim();
+      if (!v || !S.active) return;
+      S.active.grat = (S.active.grat || []).concat(v.slice(0, 160));
+      save();
+      renderDoing();
+      const inp = $("#gratIn"); if (inp) inp.focus();
       return;
     }
     if (f.dataset.hParkForm !== undefined) {
