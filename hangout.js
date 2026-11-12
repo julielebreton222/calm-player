@@ -99,6 +99,18 @@
       "A place that holds you. Imagine you're there for a breath.",
       "Something you're learning, and that you get to learn it.",
     ] },
+    { id: "poem", name: "Writing a poem", color: "#DCD3E6", energy: ["low", "make", "curious"], prompts: [
+      "Look out of the nearest window. Write five lines, each starting with “I see…”.",
+      "Write a poem to an object in your room, as if it were an old friend.",
+      "Pick one feeling and give it a colour, a smell, a sound and a place to live.",
+      "Write a tiny poem of three lines about the last thing that made you smile.",
+      "Take a line from your morning pages or journal and let it become the first line of a poem.",
+      "Write a poem from the point of view of a flower, a stone or the moon.",
+      "Write a list poem: ten small things you love, one per line. Read it aloud.",
+      "Write a poem that begins “Once, in a forest…” and let it become a fairytale.",
+      "Write a spell-poem: what you want to call in, in four rhyming lines.",
+      "Write a letter-poem to someone you love — why them, in images, not explanations.",
+    ] },
     { id: "morning-pages", name: "Morning pages", color: "#F3DCC8", energy: ["low", "restless"], prompts: [
       "Three pages by hand, first thing. Don't reread.",
       "Write without stopping until the pages are full.",
@@ -800,7 +812,7 @@
     const person = S.people.length ? S.people[S.reminderIndex % S.people.length] : null;
     const snd = window.CalmPlayer ? window.CalmPlayer.soundOptions() : [];
     const cur = window.CalmPlayer ? window.CalmPlayer.currentSound() : "";
-    const writing = ["morning-pages", "journaling", "spell", "talking", "curiosity", "fairytales", "song", "letters", "cards"].includes(a.passion);
+    const writing = ["morning-pages", "journaling", "spell", "talking", "curiosity", "fairytales", "song", "letters", "cards", "poem"].includes(a.passion);
     const med = a.med ? '<div class="med-set"><span class="eyebrow">Bells</span><span>' +
       esc((MED_SOUNDS.find((x) => x.id === a.med.sound) || {}).label || "Bell") + " · start" + (a.med.interval ? " · every " + a.med.interval + " min" : "") + " · three at the end</span>" +
       '<span class="muted small">Keep the screen on so the bells can ring.</span></div>' : "";
